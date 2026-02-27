@@ -36,7 +36,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="Forged By Freedom" className="h-16 mx-auto mb-4" />
+          <img src="/logo.png" alt="Forged By Freedom" className="h-16 mx-auto mb-4" />
           <p className="text-[#888] font-[family-name:var(--font-body)]">Coach Dashboard</p>
         </div>
 

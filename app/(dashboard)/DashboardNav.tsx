@@ -32,7 +32,7 @@ export default function DashboardNav({ userName, orgName, role }: DashboardNavPr
           <div className="flex items-center gap-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo.svg"
+              src="/logo.png"
               alt="Forged By Freedom"
               className="h-10 cursor-pointer"
               onClick={() => router.push('/')}
