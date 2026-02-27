@@ -8,6 +8,7 @@ import TrendCharts from '@/components/dashboard/TrendCharts'
 import Timeline from '@/components/dashboard/Timeline'
 import CoachNotes from '@/components/dashboard/CoachNotes'
 import FlagBadge from '@/components/dashboard/FlagBadge'
+import ProgramImport from '@/components/dashboard/ProgramImport'
 
 interface ProtocolItem {
   [key: string]: string
@@ -29,6 +30,14 @@ interface ClientProfileProps {
     current_supplements?: ProtocolItem[]
     current_peds?: ProtocolItem[]
     current_peptides?: ProtocolItem[]
+    program_name?: string
+    workout_program?: Array<{ day: string; exercises: Array<{ name: string; sets: string; reps: string }> }>
+    cardio_protocol?: Array<{ phase: string; duration: string; frequency: string; notes: string }>
+    meal_plan?: Array<{ meal: string; description: string }>
+    medical_protocol?: Array<{ name: string; dose: string; frequency: string; notes: string }>
+    target_carbs?: number | null
+    target_fats?: number | null
+    target_water_oz?: number | null
   }
   checkins: Array<{
     id: string
@@ -104,6 +113,7 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
   const tabs = [
     { id: 'latest', label: 'Latest' },
     { id: 'wellness', label: 'Wellness' },
+    { id: 'program', label: 'Program' },
     { id: 'protocol', label: 'Protocol' },
     { id: 'trends', label: 'Trends' },
     { id: 'timeline', label: 'Timeline' },
@@ -343,6 +353,108 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                     ))}
                   </div>
                 </Card>
+              </div>
+            )}
+
+            {activeTab === 'program' && (
+              <div className="space-y-4">
+                {client.workout_program && client.workout_program.length > 0 ? (
+                  <>
+                    {client.program_name && (
+                      <Card>
+                        <h3 className="text-sm font-semibold text-[#D4A017] mb-2">
+                          {client.program_name}
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
+                          <div className="bg-[#0a0a0a] rounded-lg p-2">
+                            <p className="text-xs text-[#555]">Calories</p>
+                            <p className="text-white font-bold text-sm">{client.target_calories ?? '—'}</p>
+                          </div>
+                          <div className="bg-[#0a0a0a] rounded-lg p-2">
+                            <p className="text-xs text-[#555]">Protein</p>
+                            <p className="text-white font-bold text-sm">{client.target_protein ? `${client.target_protein}g` : '—'}</p>
+                          </div>
+                          <div className="bg-[#0a0a0a] rounded-lg p-2">
+                            <p className="text-xs text-[#555]">Carbs</p>
+                            <p className="text-white font-bold text-sm">{client.target_carbs ? `${client.target_carbs}g` : '—'}</p>
+                          </div>
+                          <div className="bg-[#0a0a0a] rounded-lg p-2">
+                            <p className="text-xs text-[#555]">Fats</p>
+                            <p className="text-white font-bold text-sm">{client.target_fats ? `${client.target_fats}g` : '—'}</p>
+                          </div>
+                          <div className="bg-[#0a0a0a] rounded-lg p-2">
+                            <p className="text-xs text-[#555]">Water</p>
+                            <p className="text-white font-bold text-sm">{client.target_water_oz ? `${client.target_water_oz}oz` : '—'}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* Training Program */}
+                    <Card>
+                      <h3 className="text-sm font-semibold text-[#888] mb-4">Training Split</h3>
+                      <div className="space-y-3">
+                        {client.workout_program.map((day, i) => (
+                          <div key={i} className="bg-[#0a0a0a] rounded-lg p-3">
+                            <p className="text-sm text-[#FF6A00] font-medium mb-2">{day.day}</p>
+                            {day.exercises.map((ex, j) => (
+                              <p key={j} className="text-xs text-[#ccc] ml-3 mb-0.5">
+                                {ex.name} — <span className="text-[#888]">{ex.sets}x{ex.reps}</span>
+                              </p>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+
+                    {/* Cardio Protocol */}
+                    {client.cardio_protocol && client.cardio_protocol.length > 0 && (
+                      <Card>
+                        <h3 className="text-sm font-semibold text-[#888] mb-3">Cardio Protocol</h3>
+                        {client.cardio_protocol.map((phase, i) => (
+                          <div key={i} className="bg-[#0a0a0a] rounded-lg p-2 mb-1">
+                            <p className="text-xs text-white">
+                              <span className="text-[#FF6A00]">{phase.phase}:</span> {phase.duration}
+                            </p>
+                          </div>
+                        ))}
+                      </Card>
+                    )}
+
+                    {/* Meal Plan */}
+                    {client.meal_plan && client.meal_plan.length > 0 && (
+                      <Card>
+                        <h3 className="text-sm font-semibold text-[#888] mb-3">Meal Plan</h3>
+                        {client.meal_plan.map((meal, i) => (
+                          <div key={i} className="bg-[#0a0a0a] rounded-lg p-2 mb-1">
+                            <p className="text-xs">
+                              <span className="text-[#D4A017]">{meal.meal}:</span>{' '}
+                              <span className="text-[#ccc]">{meal.description}</span>
+                            </p>
+                          </div>
+                        ))}
+                      </Card>
+                    )}
+
+                    {/* Medical Protocol */}
+                    {client.medical_protocol && client.medical_protocol.length > 0 && (
+                      <Card>
+                        <h3 className="text-sm font-semibold text-[#888] mb-3">Medical Protocol</h3>
+                        {client.medical_protocol.map((m, i) => (
+                          <div key={i} className="bg-[#0a0a0a] rounded-lg p-2 mb-1">
+                            <p className="text-xs text-white font-medium">{m.name}</p>
+                            <p className="text-xs text-[#888]">{m.dose} — {m.frequency}</p>
+                            {m.notes && <p className="text-xs text-[#555]">{m.notes}</p>}
+                          </div>
+                        ))}
+                      </Card>
+                    )}
+
+                    <ProgramImport clientId={client.id} onImported={() => window.location.reload()} />
+                  </>
+                ) : (
+                  <ProgramImport clientId={client.id} onImported={() => window.location.reload()} />
+                )}
               </div>
             )}
 
