@@ -1,0 +1,69 @@
+'use client'
+
+import { useRouter, usePathname } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+
+interface DashboardNavProps {
+  userName: string
+  orgName: string
+  role: string
+}
+
+export default function DashboardNav({ userName, orgName, role }: DashboardNavProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
+  const links = [
+    { href: '/', label: 'Dashboard' },
+    ...(role === 'org_admin' ? [{ href: '/admin', label: 'Admin' }] : []),
+  ]
+
+  return (
+    <nav className="border-b border-[#2a2a2a] bg-[#141414]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center gap-8">
+            <h1 className="text-lg font-bold text-[#FF6A00] tracking-wider cursor-pointer" onClick={() => router.push('/')}>
+              FBF
+            </h1>
+            <div className="flex gap-1">
+              {links.map(link => (
+                <button
+                  key={link.href}
+                  onClick={() => router.push(link.href)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    pathname === link.href
+                      ? 'bg-[#FF6A00]/10 text-[#FF6A00]'
+                      : 'text-[#888] hover:text-white'
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm text-white">{userName}</p>
+              <p className="text-xs text-[#555]">{orgName}</p>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="px-3 py-1.5 text-xs text-[#888] hover:text-white transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  )
+}
