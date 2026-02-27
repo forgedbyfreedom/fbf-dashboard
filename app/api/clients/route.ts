@@ -10,7 +10,12 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const { first_name, last_name, email, phone, target_calories, target_protein, target_steps } = body
+    const {
+      first_name, last_name, email, phone,
+      target_calories, target_protein, target_steps,
+      weigh_in_day,
+      current_supplements, current_peds, current_peptides,
+    } = body
 
     if (!first_name || !last_name) {
       return NextResponse.json({ error: 'First and last name required' }, { status: 400 })
@@ -18,15 +23,15 @@ export async function POST(request: NextRequest) {
 
     const adminSupabase = createAdminClient()
 
-    // Get user's org (use admin client to bypass RLS)
-    const { data: membership } = await adminSupabase
+    // Get user's org
+    const { data: membership, error: memberError } = await adminSupabase
       .from('org_members')
       .select('organization_id')
       .eq('user_id', user.id)
       .single()
 
-    if (!membership) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 400 })
+    if (memberError || !membership) {
+      return NextResponse.json({ error: `No organization found: ${memberError?.message || 'no membership row'}` }, { status: 400 })
     }
 
     // Create client
@@ -36,28 +41,34 @@ export async function POST(request: NextRequest) {
         organization_id: membership.organization_id,
         first_name,
         last_name,
-        email,
-        phone,
+        email: email || null,
+        phone: phone || null,
         target_calories: target_calories || null,
         target_protein: target_protein || null,
         target_steps: target_steps || null,
+        weigh_in_day: weigh_in_day || 'monday',
+        current_supplements: current_supplements || [],
+        current_peds: current_peds || [],
+        current_peptides: current_peptides || [],
       })
       .select()
       .single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: `Client insert failed: ${error.message}` }, { status: 500 })
 
     // Assign to current coach
-    await adminSupabase.from('client_coach_assignments').insert({
+    const { error: assignError } = await adminSupabase.from('client_coach_assignments').insert({
       client_id: client.id,
       coach_user_id: user.id,
     })
+    if (assignError) console.error('Assignment error:', assignError.message)
 
     // Create initial metrics row
-    await adminSupabase.from('client_metrics').insert({
+    const { error: metricsError } = await adminSupabase.from('client_metrics').insert({
       client_id: client.id,
       coach_user_id: user.id,
     })
+    if (metricsError) console.error('Metrics error:', metricsError.message)
 
     // Generate magic link token
     const rawToken = crypto.randomUUID() + crypto.randomUUID()
@@ -74,7 +85,7 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const checkinUrl = `${appUrl}/checkin/${rawToken}`
 
-    // Trigger webhook
+    // Trigger webhook (fire and forget)
     triggerN8nWebhook('client.created', {
       client_id: client.id,
       first_name,
@@ -84,7 +95,9 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ client, checkin_url: checkinUrl })
-  } catch {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown server error'
+    console.error('Client creation error:', message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

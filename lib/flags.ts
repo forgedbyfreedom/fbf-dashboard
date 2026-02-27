@@ -61,7 +61,7 @@ export async function computeFlags(
   // Sleep crash: avg sleep < 6h last 3 days
   const last3Days = checkins.slice(0, 3).filter(c => c.sleep_hours != null)
   if (last3Days.length >= 2) {
-    const avgSleep = last3Days.reduce((sum, c) => sum + Number(c.sleep_hours), 0) / last3Days.length
+    const avgSleep = last3Days.reduce((sum: number, c: { sleep_hours: number }) => sum + Number(c.sleep_hours), 0) / last3Days.length
     if (avgSleep < 6) {
       flags.push({
         flag_type: 'sleep_crash',
@@ -75,7 +75,7 @@ export async function computeFlags(
   if (client.target_steps) {
     const last7Days = checkins.slice(0, 7).filter(c => c.steps != null)
     if (last7Days.length >= 3) {
-      const avgSteps = last7Days.reduce((sum, c) => sum + c.steps, 0) / last7Days.length
+      const avgSteps = last7Days.reduce((sum: number, c: { steps: number }) => sum + c.steps, 0) / last7Days.length
       if (avgSteps < client.target_steps) {
         flags.push({
           flag_type: 'steps_low',
@@ -108,6 +108,68 @@ export async function computeFlags(
       flag_type: 'side_effects',
       severity: 'yellow',
       details: { date: latestWithSideEffects.date, notes: latestWithSideEffects.side_effects_notes },
+    })
+  }
+
+  // ---- NEW FLAGS ----
+
+  // Mood crash: mood drops 3+ points from 7-day avg
+  const last7WithMood = checkins.slice(0, 7).filter(c => c.mood_rating != null)
+  if (last7WithMood.length >= 3) {
+    const avgMood = last7WithMood.reduce((sum: number, c: { mood_rating: number }) => sum + Number(c.mood_rating), 0) / last7WithMood.length
+    const latestMood = Number(last7WithMood[0].mood_rating)
+    if (avgMood - latestMood >= 3) {
+      flags.push({
+        flag_type: 'mood_crash',
+        severity: 'red',
+        details: { current: latestMood, avg_7d: Math.round(avgMood * 10) / 10, drop: Math.round((avgMood - latestMood) * 10) / 10 },
+      })
+    }
+  }
+
+  // High temp: > 99.5°F
+  const latestWithTemp = checkins.find(c => c.body_temp != null)
+  if (latestWithTemp && Number(latestWithTemp.body_temp) > 99.5) {
+    flags.push({
+      flag_type: 'high_temp',
+      severity: 'yellow',
+      details: { temp: Number(latestWithTemp.body_temp), date: latestWithTemp.date },
+    })
+  }
+
+  // Dehydrated: water < 64oz
+  const latestWithWater = checkins.find(c => c.water_oz != null)
+  if (latestWithWater && Number(latestWithWater.water_oz) < 64) {
+    flags.push({
+      flag_type: 'dehydrated',
+      severity: 'yellow',
+      details: { water_oz: Number(latestWithWater.water_oz), date: latestWithWater.date },
+    })
+  }
+
+  // High stress: stress >= 8 for 3+ consecutive days
+  const last3WithStress = checkins.slice(0, 3).filter(c => c.stress_level != null)
+  if (last3WithStress.length >= 3) {
+    const allHighStress = last3WithStress.every(c => Number(c.stress_level) >= 8)
+    if (allHighStress) {
+      flags.push({
+        flag_type: 'high_stress',
+        severity: 'yellow',
+        details: {
+          consecutive_days: 3,
+          levels: last3WithStress.map(c => Number(c.stress_level)),
+        },
+      })
+    }
+  }
+
+  // Missed supplement: compliance false
+  const latestCheckin = checkins[0]
+  if (latestCheckin && latestCheckin.supplement_compliance === false) {
+    flags.push({
+      flag_type: 'missed_supplement',
+      severity: 'yellow',
+      details: { date: latestCheckin.date },
     })
   }
 

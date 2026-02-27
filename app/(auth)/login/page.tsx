@@ -35,10 +35,9 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#FF6A00] tracking-wider">
-            FORGED BY FREEDOM
-          </h1>
-          <p className="text-[#888] mt-2 font-[family-name:var(--font-body)]">Coach Dashboard</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Forged By Freedom" className="h-16 mx-auto mb-4" />
+          <p className="text-[#888] font-[family-name:var(--font-body)]">Coach Dashboard</p>
         </div>
 
         <form onSubmit={handleLogin} className="bg-[#141414] rounded-xl p-8 border border-[#2a2a2a]">
@@ -61,7 +60,7 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-[#555]"
-              placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+              placeholder="••••••••"
               required
             />
           </div>
@@ -80,6 +79,8 @@ function LoginForm() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <p className="text-center text-[#333] text-xs mt-6">Forged By Freedom — Strength & Nutrition</p>
       </div>
     </div>
   )

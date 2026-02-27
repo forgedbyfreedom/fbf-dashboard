@@ -29,6 +29,17 @@ export async function updateClientMetrics(supabase: SupabaseClient, clientId: st
   const avgSteps7d = avg(last7.filter(c => c.steps != null).map(c => Number(c.steps)))
   const avgSleep7d = avg(last7.filter(c => c.sleep_hours != null).map(c => Number(c.sleep_hours)))
 
+  // NEW: Mood, stress, water averages
+  const avgMood7d = avg(last7.filter(c => c.mood_rating != null).map(c => Number(c.mood_rating)))
+  const avgStress7d = avg(last7.filter(c => c.stress_level != null).map(c => Number(c.stress_level)))
+  const avgWater7d = avg(last7.filter(c => c.water_oz != null).map(c => Number(c.water_oz)))
+
+  // NEW: Supplement compliance (% of days compliant in last 7)
+  const withCompliance = last7.filter(c => c.supplement_compliance != null)
+  const supplementCompliance7d = withCompliance.length > 0
+    ? (withCompliance.filter(c => c.supplement_compliance === true).length / withCompliance.length) * 100
+    : null
+
   // Weight metrics
   const withWeight = checkins.filter(c => c.weight_lbs != null)
   const weightCurrent = withWeight.length > 0 ? Number(withWeight[0].weight_lbs) : null
@@ -86,6 +97,10 @@ export async function updateClientMetrics(supabase: SupabaseClient, clientId: st
       avg_protein_7d: avgProtein7d ? Math.round(avgProtein7d) : null,
       avg_steps_7d: avgSteps7d ? Math.round(avgSteps7d) : null,
       avg_sleep_7d: avgSleep7d ? Math.round(avgSleep7d * 10) / 10 : null,
+      avg_mood_7d: avgMood7d ? Math.round(avgMood7d * 10) / 10 : null,
+      avg_stress_7d: avgStress7d ? Math.round(avgStress7d * 10) / 10 : null,
+      avg_water_7d: avgWater7d ? Math.round(avgWater7d) : null,
+      supplement_compliance_7d: supplementCompliance7d ? Math.round(supplementCompliance7d * 100) / 100 : null,
       weight_current: weightCurrent,
       weight_delta_7d: weightDelta7d ? Math.round(weightDelta7d * 10) / 10 : null,
       weight_delta_30d: weightDelta30d ? Math.round(weightDelta30d * 10) / 10 : null,

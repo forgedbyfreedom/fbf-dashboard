@@ -43,6 +43,10 @@ export async function POST(request: NextRequest) {
         target_calories: link.clients.target_calories,
         target_protein: link.clients.target_protein,
         target_steps: link.clients.target_steps,
+        weigh_in_day: link.clients.weigh_in_day || 'monday',
+        current_supplements: link.clients.current_supplements || [],
+        current_peds: link.clients.current_peds || [],
+        current_peptides: link.clients.current_peptides || [],
       },
     })
   } catch {

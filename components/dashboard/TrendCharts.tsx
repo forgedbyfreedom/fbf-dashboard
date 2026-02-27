@@ -19,6 +19,11 @@ interface Checkin {
   steps: number | null
   sleep_hours: number | null
   training_done: boolean
+  mood_rating?: number | null
+  stress_level?: number | null
+  water_oz?: number | null
+  body_temp?: number | null
+  estimated_calories_burned?: number | null
 }
 
 interface TrendChartsProps {
@@ -45,6 +50,11 @@ export default function TrendCharts({ checkins }: TrendChartsProps) {
       protein: c.protein_g,
       steps: c.steps,
       sleep: c.sleep_hours ? Number(c.sleep_hours) : null,
+      mood: c.mood_rating ? Number(c.mood_rating) : null,
+      stress: c.stress_level ? Number(c.stress_level) : null,
+      water: c.water_oz ? Number(c.water_oz) : null,
+      temp: c.body_temp ? Number(c.body_temp) : null,
+      calBurned: c.estimated_calories_burned ? Number(c.estimated_calories_burned) : null,
     }))
 
   const charts = [
@@ -53,6 +63,11 @@ export default function TrendCharts({ checkins }: TrendChartsProps) {
     { key: 'protein', label: 'Protein (g)', color: '#3b82f6', unit: 'g' },
     { key: 'steps', label: 'Steps', color: '#a855f7', unit: '' },
     { key: 'sleep', label: 'Sleep (hrs)', color: '#eab308', unit: 'h' },
+    { key: 'mood', label: 'Mood (1-10)', color: '#22d3ee', unit: '/10' },
+    { key: 'stress', label: 'Stress (1-10)', color: '#f43f5e', unit: '/10' },
+    { key: 'water', label: 'Water (oz)', color: '#06b6d4', unit: ' oz' },
+    { key: 'temp', label: 'Body Temp (°F)', color: '#fb923c', unit: '°F' },
+    { key: 'calBurned', label: 'Calories Burned', color: '#D4A017', unit: ' cal' },
   ]
 
   return (

@@ -11,6 +11,10 @@ interface ClientInfo {
   target_calories: number | null
   target_protein: number | null
   target_steps: number | null
+  weigh_in_day?: string
+  current_supplements?: Array<{ name: string; dose: string; frequency: string }>
+  current_peds?: Array<{ compound: string; dose: string; frequency: string; route: string }>
+  current_peptides?: Array<{ name: string; dose: string; frequency: string; timing: string }>
 }
 
 export default function CheckInPage() {

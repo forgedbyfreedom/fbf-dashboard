@@ -9,6 +9,10 @@ import Timeline from '@/components/dashboard/Timeline'
 import CoachNotes from '@/components/dashboard/CoachNotes'
 import FlagBadge from '@/components/dashboard/FlagBadge'
 
+interface ProtocolItem {
+  [key: string]: string
+}
+
 interface ClientProfileProps {
   client: {
     id: string
@@ -21,6 +25,10 @@ interface ClientProfileProps {
     target_protein: number | null
     target_steps: number | null
     is_active: boolean
+    weigh_in_day?: string
+    current_supplements?: ProtocolItem[]
+    current_peds?: ProtocolItem[]
+    current_peptides?: ProtocolItem[]
   }
   checkins: Array<{
     id: string
@@ -36,12 +44,20 @@ interface ClientProfileProps {
     training_done: boolean
     training_type: string | null
     workout_notes: string | null
+    workout_description: string | null
     rpe: number | null
     cardio_minutes: number | null
     supplements_json: string[]
     ped_log_json: string[]
     side_effects_notes: string | null
     general_notes: string | null
+    mood_rating: number | null
+    mood_notes: string | null
+    body_temp: number | null
+    water_oz: number | null
+    stress_level: number | null
+    estimated_calories_burned: number | null
+    supplement_compliance: boolean | null
   }>
   flags: Array<{
     id: string
@@ -69,6 +85,10 @@ interface ClientProfileProps {
     avg_protein_7d: number | null
     avg_steps_7d: number | null
     avg_sleep_7d: number | null
+    avg_mood_7d: number | null
+    avg_stress_7d: number | null
+    avg_water_7d: number | null
+    supplement_compliance_7d: number | null
     weight_current: number | null
     weight_delta_7d: number | null
     weight_delta_30d: number | null
@@ -83,6 +103,8 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
 
   const tabs = [
     { id: 'latest', label: 'Latest' },
+    { id: 'wellness', label: 'Wellness' },
+    { id: 'protocol', label: 'Protocol' },
     { id: 'trends', label: 'Trends' },
     { id: 'timeline', label: 'Timeline' },
     { id: 'notes', label: 'Notes' },
@@ -142,7 +164,7 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                         <div>
                           <p className="text-xs text-[#555]">Sleep</p>
                           <p className="text-xl font-bold text-white">{latest.sleep_hours ?? '—'} <span className="text-sm text-[#555]">hrs</span></p>
-                          {latest.sleep_quality && <p className="text-xs text-[#888]">Quality: {latest.sleep_quality}/10</p>}
+                          {latest.sleep_quality && <p className="text-xs text-[#888]">Quality: {latest.sleep_quality}/5</p>}
                         </div>
                         <div>
                           <p className="text-xs text-[#555]">Steps</p>
@@ -153,6 +175,32 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                           <p className="text-xl font-bold text-white">{latest.cardio_minutes ?? '—'} <span className="text-sm text-[#555]">min</span></p>
                         </div>
                       </div>
+                    </Card>
+
+                    {/* Wellness snapshot */}
+                    <Card>
+                      <h3 className="text-sm font-semibold text-[#888] mb-4">Wellness</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-[#555]">Mood</p>
+                          <p className="text-xl font-bold text-white">{latest.mood_rating ?? '—'}<span className="text-sm text-[#555]">/10</span></p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#555]">Stress</p>
+                          <p className="text-xl font-bold text-white">{latest.stress_level ?? '—'}<span className="text-sm text-[#555]">/10</span></p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#555]">Water</p>
+                          <p className="text-xl font-bold text-white">{latest.water_oz ?? '—'} <span className="text-sm text-[#555]">oz</span></p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#555]">Temp</p>
+                          <p className="text-xl font-bold text-white">{latest.body_temp ?? '—'}<span className="text-sm text-[#555]">°F</span></p>
+                        </div>
+                      </div>
+                      {latest.mood_notes && (
+                        <p className="text-sm text-[#ccc] mt-3 pt-3 border-t border-[#2a2a2a]">{latest.mood_notes}</p>
+                      )}
                     </Card>
 
                     <Card>
@@ -185,14 +233,25 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                         <div className="flex items-center gap-3 mb-2">
                           <Badge variant="green">{latest.training_type || 'Trained'}</Badge>
                           {latest.rpe && <span className="text-sm text-[#888]">RPE: {latest.rpe}/10</span>}
+                          {latest.estimated_calories_burned && (
+                            <span className="text-sm text-[#D4A017]">~{latest.estimated_calories_burned} cal burned</span>
+                          )}
                         </div>
-                        {latest.workout_notes && <p className="text-sm text-[#ccc]">{latest.workout_notes}</p>}
+                        {latest.workout_description && (
+                          <p className="text-sm text-[#ccc] mb-2">{latest.workout_description}</p>
+                        )}
+                        {latest.workout_notes && <p className="text-sm text-[#999]">{latest.workout_notes}</p>}
                       </Card>
                     )}
 
                     {(latest.supplements_json?.length > 0 || latest.ped_log_json?.length > 0) && (
                       <Card>
-                        <h3 className="text-sm font-semibold text-[#888] mb-3">Protocol</h3>
+                        <h3 className="text-sm font-semibold text-[#888] mb-3">Daily Protocol Log</h3>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge variant={latest.supplement_compliance !== false ? 'green' : 'red'}>
+                            {latest.supplement_compliance !== false ? 'Compliant' : 'Missed'}
+                          </Badge>
+                        </div>
                         {latest.supplements_json?.length > 0 && (
                           <div className="mb-3">
                             <p className="text-xs text-[#555] mb-1">Supplements</p>
@@ -232,6 +291,124 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
               </div>
             )}
 
+            {activeTab === 'wellness' && (
+              <div className="space-y-4">
+                {/* Wellness overview cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <p className="text-xs text-[#555] mb-1">Avg Mood (7d)</p>
+                    <p className="text-2xl font-bold text-white">{metrics?.avg_mood_7d ?? '—'}<span className="text-sm text-[#555]">/10</span></p>
+                  </Card>
+                  <Card>
+                    <p className="text-xs text-[#555] mb-1">Avg Stress (7d)</p>
+                    <p className="text-2xl font-bold text-white">{metrics?.avg_stress_7d ?? '—'}<span className="text-sm text-[#555]">/10</span></p>
+                  </Card>
+                  <Card>
+                    <p className="text-xs text-[#555] mb-1">Avg Water (7d)</p>
+                    <p className="text-2xl font-bold text-white">{metrics?.avg_water_7d ?? '—'} <span className="text-sm text-[#555]">oz</span></p>
+                  </Card>
+                  <Card>
+                    <p className="text-xs text-[#555] mb-1">Supplement Compliance</p>
+                    <p className="text-2xl font-bold text-white">{metrics?.supplement_compliance_7d != null ? `${Math.round(metrics.supplement_compliance_7d)}%` : '—'}</p>
+                  </Card>
+                </div>
+
+                {/* Recent mood/stress entries */}
+                <Card>
+                  <h3 className="text-sm font-semibold text-[#888] mb-4">Recent Wellness Entries</h3>
+                  <div className="space-y-3">
+                    {checkins.slice(0, 7).map(c => (
+                      <div key={c.id} className="flex items-center gap-4 text-sm border-b border-[#1a1a1a] pb-2 last:border-0">
+                        <span className="text-[#555] w-20">
+                          {new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <div className="flex gap-4 flex-1">
+                          {c.mood_rating != null && (
+                            <span className="text-white">Mood: <span className={c.mood_rating >= 7 ? 'text-green-400' : c.mood_rating >= 4 ? 'text-yellow-400' : 'text-red-400'}>{c.mood_rating}</span></span>
+                          )}
+                          {c.stress_level != null && (
+                            <span className="text-white">Stress: <span className={c.stress_level <= 4 ? 'text-green-400' : c.stress_level <= 7 ? 'text-yellow-400' : 'text-red-400'}>{c.stress_level}</span></span>
+                          )}
+                          {c.water_oz != null && (
+                            <span className="text-white">Water: <span className={c.water_oz >= 64 ? 'text-blue-400' : 'text-yellow-400'}>{c.water_oz}oz</span></span>
+                          )}
+                          {c.body_temp != null && (
+                            <span className="text-white">Temp: <span className={Number(c.body_temp) > 99.5 ? 'text-red-400' : 'text-green-400'}>{c.body_temp}°F</span></span>
+                          )}
+                        </div>
+                        {c.mood_notes && (
+                          <span className="text-[#888] text-xs truncate max-w-[200px]">{c.mood_notes}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'protocol' && (
+              <div className="space-y-4">
+                {/* Assigned supplements */}
+                <Card>
+                  <h3 className="text-sm font-semibold text-[#D4A017] mb-4">Supplements</h3>
+                  {client.current_supplements && client.current_supplements.length > 0 ? (
+                    <div className="space-y-2">
+                      {client.current_supplements.map((s, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 bg-[#0a0a0a] rounded-lg">
+                          <div className="w-2 h-2 rounded-full bg-green-500" />
+                          <span className="text-white text-sm font-medium">{s.name}</span>
+                          <span className="text-[#888] text-xs">{s.dose}</span>
+                          <span className="text-[#555] text-xs ml-auto">{s.frequency}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#555]">No supplements assigned</p>
+                  )}
+                </Card>
+
+                {/* PEDs */}
+                <Card>
+                  <h3 className="text-sm font-semibold text-[#D4A017] mb-4">PED Protocol</h3>
+                  {client.current_peds && client.current_peds.length > 0 ? (
+                    <div className="space-y-2">
+                      {client.current_peds.map((p, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 bg-[#0a0a0a] rounded-lg">
+                          <div className="w-2 h-2 rounded-full bg-[#FF6A00]" />
+                          <span className="text-white text-sm font-medium">{p.compound}</span>
+                          <span className="text-[#888] text-xs">{p.dose}</span>
+                          <span className="text-[#555] text-xs">{p.route}</span>
+                          <span className="text-[#555] text-xs ml-auto">{p.frequency}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#555]">No PEDs assigned</p>
+                  )}
+                </Card>
+
+                {/* Peptides */}
+                <Card>
+                  <h3 className="text-sm font-semibold text-[#D4A017] mb-4">Peptide Protocol</h3>
+                  {client.current_peptides && client.current_peptides.length > 0 ? (
+                    <div className="space-y-2">
+                      {client.current_peptides.map((p, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 bg-[#0a0a0a] rounded-lg">
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          <span className="text-white text-sm font-medium">{p.name}</span>
+                          <span className="text-[#888] text-xs">{p.dose}</span>
+                          <span className="text-[#555] text-xs">{p.timing}</span>
+                          <span className="text-[#555] text-xs ml-auto">{p.frequency}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#555]">No peptides assigned</p>
+                  )}
+                </Card>
+              </div>
+            )}
+
             {activeTab === 'trends' && <TrendCharts checkins={checkins} />}
 
             {activeTab === 'timeline' && <Timeline checkins={checkins} />}
@@ -260,6 +437,10 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                       <Badge variant={client.is_active ? 'green' : 'red'}>
                         {client.is_active ? 'Active' : 'Inactive'}
                       </Badge>
+                    </div>
+                    <div>
+                      <p className="text-[#555]">Weigh-in Day</p>
+                      <p className="text-white capitalize">{client.weigh_in_day || 'Monday'}</p>
                     </div>
                   </div>
                 </Card>
