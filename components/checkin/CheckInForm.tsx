@@ -37,6 +37,11 @@ interface ClientInfo {
   current_supplements?: SupplementItem[]
   current_peds?: PedItem[]
   current_peptides?: PeptideItem[]
+  workout_program?: Array<{ day: string; exercises: Array<{ name: string; sets: string; reps: string }> }>
+  cardio_protocol?: Array<{ phase: string; duration: string }>
+  medical_protocol?: Array<{ name: string; dose: string; frequency: string; notes: string }>
+  target_carbs?: number | null
+  target_fats?: number | null
 }
 
 interface CheckInFormProps {
@@ -280,7 +285,7 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm text-[#888] mb-2">Carbs (g)</label>
+              <label className="block text-sm text-[#888] mb-2">Carbs (g){client.target_carbs ? ` (target: ${client.target_carbs}g)` : ''}</label>
               <input
                 type="number" inputMode="numeric"
                 value={form.carbs_g}
@@ -290,7 +295,7 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm text-[#888] mb-2">Fat (g)</label>
+              <label className="block text-sm text-[#888] mb-2">Fat (g){client.target_fats ? ` (target: ${client.target_fats}g)` : ''}</label>
               <input
                 type="number" inputMode="numeric"
                 value={form.fat_g}
@@ -333,6 +338,43 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
             </div>
             {form.training_done && (
               <>
+                {/* Show assigned workout program if available */}
+                {client.workout_program && client.workout_program.length > 0 && (
+                  <div>
+                    <label className="block text-sm text-[#D4A017] mb-2 font-semibold">Today&apos;s Assigned Workout</label>
+                    <div className="space-y-2 mb-3">
+                      {client.workout_program.map((day, i) => (
+                        <details key={i} className="bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden">
+                          <summary className="px-4 py-3 text-sm text-[#FF6A00] font-medium cursor-pointer hover:bg-[#1a1a1a]">
+                            {day.day}
+                          </summary>
+                          <div className="px-4 pb-3">
+                            {day.exercises.map((ex, j) => (
+                              <p key={j} className="text-xs text-[#ccc] py-0.5 ml-2">
+                                {ex.name} — <span className="text-[#888]">{ex.sets}x{ex.reps}</span>
+                              </p>
+                            ))}
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                    <div className="flex gap-3 mb-3">
+                      <button type="button"
+                        onClick={() => update('workout_description', 'Completed assigned workout as prescribed')}
+                        className="flex-1 py-3 rounded-xl text-sm font-medium bg-green-600/20 text-green-400 border border-green-600/30 hover:bg-green-600/30 transition-colors"
+                      >
+                        Completed as assigned
+                      </button>
+                      <button type="button"
+                        onClick={() => update('workout_description', '')}
+                        className="flex-1 py-3 rounded-xl text-sm font-medium bg-[#141414] text-[#888] border border-[#2a2a2a] hover:border-[#444] transition-colors"
+                      >
+                        Modified / Custom
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm text-[#888] mb-2">Training Type</label>
                   <div className="flex gap-2 flex-wrap">
@@ -411,13 +453,64 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
             {/* Show client's assigned supplements as checklist */}
             {client.current_supplements && client.current_supplements.length > 0 && (
               <div>
-                <label className="block text-sm text-[#888] mb-3">Your Supplement Protocol</label>
+                <label className="block text-sm text-[#D4A017] mb-3 font-semibold">Your Supplement Protocol</label>
                 <div className="space-y-2">
                   {client.current_supplements.map((supp, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 bg-[#141414] border border-[#2a2a2a] rounded-xl">
                       <div className="w-3 h-3 rounded-full bg-green-500" />
                       <span className="text-white text-sm">{supp.name}</span>
                       <span className="text-[#555] text-xs">{supp.dose} — {supp.frequency}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Show medical protocol (GLP, PEDs, peptides) */}
+            {client.medical_protocol && client.medical_protocol.length > 0 && (
+              <div>
+                <label className="block text-sm text-[#D4A017] mb-3 font-semibold">Medical Protocol</label>
+                <div className="space-y-2">
+                  {client.medical_protocol.map((med, i) => (
+                    <div key={i} className="p-3 bg-[#141414] border border-[#2a2a2a] rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-[#FF6A00]" />
+                        <span className="text-white text-sm font-medium">{med.name}</span>
+                        <span className="text-[#888] text-xs">{med.dose}</span>
+                      </div>
+                      <p className="text-[#555] text-xs ml-5 mt-1">{med.frequency}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Show assigned PEDs */}
+            {client.current_peds && client.current_peds.length > 0 && (
+              <div>
+                <label className="block text-sm text-[#D4A017] mb-3 font-semibold">PED Protocol</label>
+                <div className="space-y-2">
+                  {client.current_peds.map((ped, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-[#141414] border border-[#2a2a2a] rounded-xl">
+                      <div className="w-3 h-3 rounded-full bg-[#FF6A00]" />
+                      <span className="text-white text-sm">{ped.compound}</span>
+                      <span className="text-[#555] text-xs">{ped.dose} — {ped.frequency} ({ped.route})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Show assigned peptides */}
+            {client.current_peptides && client.current_peptides.length > 0 && (
+              <div>
+                <label className="block text-sm text-[#D4A017] mb-3 font-semibold">Peptide Protocol</label>
+                <div className="space-y-2">
+                  {client.current_peptides.map((pep, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-[#141414] border border-[#2a2a2a] rounded-xl">
+                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                      <span className="text-white text-sm">{pep.name}</span>
+                      <span className="text-[#555] text-xs">{pep.dose} — {pep.frequency} ({pep.timing})</span>
                     </div>
                   ))}
                 </div>
@@ -439,19 +532,28 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
             </div>
 
             <div>
-              <label className="block text-sm text-[#888] mb-2">Supplements (one per line)</label>
-              <textarea value={form.supplements_json} onChange={e => update('supplements_json', e.target.value)}
-                className={`${inputClass} min-h-[100px] text-base`} placeholder={"Creatine 5g\nFish Oil 2g\nVitamin D 5000iu"} />
+              <label className="block text-sm text-[#888] mb-2">Supplement Notes (voice or type)</label>
+              <VoiceInput
+                value={form.supplements_json}
+                onChange={v => update('supplements_json', v)}
+                placeholder={"Creatine 5g, Fish Oil 3g, Vitamin D 5000iu..."}
+              />
             </div>
             <div>
-              <label className="block text-sm text-[#888] mb-2">PED / Peptide Log (one per line)</label>
-              <textarea value={form.ped_log_json} onChange={e => update('ped_log_json', e.target.value)}
-                className={`${inputClass} min-h-[100px] text-base`} placeholder={"Test Cyp 250mg\nBPC-157 250mcg"} />
+              <label className="block text-sm text-[#888] mb-2">PED / Peptide Notes (voice or type)</label>
+              <VoiceInput
+                value={form.ped_log_json}
+                onChange={v => update('ped_log_json', v)}
+                placeholder={"Test Cyp 250mg pinned, Retatrutide 5mg injected..."}
+              />
             </div>
             <div>
-              <label className="block text-sm text-[#888] mb-2">Side Effects</label>
-              <textarea value={form.side_effects_notes} onChange={e => update('side_effects_notes', e.target.value)}
-                className={`${inputClass} min-h-[80px] text-base`} placeholder="Any side effects to report?" />
+              <label className="block text-sm text-[#888] mb-2">Side Effects (voice or type)</label>
+              <VoiceInput
+                value={form.side_effects_notes}
+                onChange={v => update('side_effects_notes', v)}
+                placeholder="Any side effects to report?"
+              />
             </div>
           </>
         )}

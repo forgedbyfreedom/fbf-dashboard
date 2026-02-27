@@ -47,6 +47,11 @@ export async function POST(request: NextRequest) {
         current_supplements: link.clients.current_supplements || [],
         current_peds: link.clients.current_peds || [],
         current_peptides: link.clients.current_peptides || [],
+        workout_program: link.clients.workout_program || [],
+        cardio_protocol: link.clients.cardio_protocol || [],
+        medical_protocol: link.clients.medical_protocol || [],
+        target_carbs: link.clients.target_carbs,
+        target_fats: link.clients.target_fats,
       },
     })
   } catch {
