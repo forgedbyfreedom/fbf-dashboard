@@ -16,6 +16,10 @@ interface ClientMetric {
   avg_protein_7d: number | null
   avg_steps_7d: number | null
   avg_sleep_7d: number | null
+  avg_mood_7d: number | null
+  avg_stress_7d: number | null
+  avg_water_7d: number | null
+  supplement_compliance_7d: number | null
   weight_current: number | null
   weight_delta_7d: number | null
   weight_delta_30d: number | null
@@ -49,6 +53,26 @@ export default function ClientCard({ metric }: { metric: ClientMetric }) {
     return `${sign}${val}`
   }
 
+  const moodColor = (val: number | null) => {
+    if (val == null) return 'text-[#888]'
+    if (val >= 7) return 'text-green-400'
+    if (val >= 4) return 'text-yellow-400'
+    return 'text-red-400'
+  }
+
+  const stressColor = (val: number | null) => {
+    if (val == null) return 'text-[#888]'
+    if (val <= 4) return 'text-green-400'
+    if (val <= 7) return 'text-yellow-400'
+    return 'text-red-400'
+  }
+
+  const waterColor = (val: number | null) => {
+    if (val == null) return 'text-[#888]'
+    if (val >= 64) return 'text-blue-400'
+    return 'text-yellow-400'
+  }
+
   return (
     <tr
       onClick={() => router.push(`/clients/${client.id}`)}
@@ -68,6 +92,18 @@ export default function ClientCard({ metric }: { metric: ClientMetric }) {
       <td className="px-4 py-3 text-sm text-[#888]">{metric.avg_protein_7d ?? '—'}g</td>
       <td className="px-4 py-3 text-sm text-[#888]">{metric.avg_steps_7d ?? '—'}</td>
       <td className="px-4 py-3 text-sm text-[#888]">{metric.avg_sleep_7d ?? '—'}h</td>
+      <td className={`px-4 py-3 text-sm ${moodColor(metric.avg_mood_7d)}`}>
+        {metric.avg_mood_7d ?? '—'}
+      </td>
+      <td className={`px-4 py-3 text-sm ${stressColor(metric.avg_stress_7d)}`}>
+        {metric.avg_stress_7d ?? '—'}
+      </td>
+      <td className={`px-4 py-3 text-sm ${waterColor(metric.avg_water_7d)}`}>
+        {metric.avg_water_7d ? `${metric.avg_water_7d}oz` : '—'}
+      </td>
+      <td className="px-4 py-3 text-sm text-[#888]">
+        {metric.supplement_compliance_7d != null ? `${Math.round(metric.supplement_compliance_7d)}%` : '—'}
+      </td>
       <td className="px-4 py-3 text-sm text-[#888]">
         {metric.weight_current ?? '—'}
         <span className="text-xs ml-1">

@@ -16,6 +16,10 @@ interface ClientMetric {
   avg_protein_7d: number | null
   avg_steps_7d: number | null
   avg_sleep_7d: number | null
+  avg_mood_7d: number | null
+  avg_stress_7d: number | null
+  avg_water_7d: number | null
+  supplement_compliance_7d: number | null
   weight_current: number | null
   weight_delta_7d: number | null
   weight_delta_30d: number | null
@@ -141,6 +145,10 @@ export default function ClientTable({ metrics }: { metrics: ClientMetric[] }) {
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Avg Protein</th>
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Avg Steps</th>
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Avg Sleep</th>
+                <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Mood</th>
+                <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Stress</th>
+                <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Water</th>
+                <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Supps</th>
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Weight (7d/30d)</th>
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => handleSort('status')}>
                   Flags {sortBy === 'status' && (sortDir === 'asc' ? '↑' : '↓')}
@@ -153,7 +161,7 @@ export default function ClientTable({ metrics }: { metrics: ClientMetric[] }) {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-[#555]">
+                  <td colSpan={13} className="px-4 py-12 text-center text-[#555]">
                     {search || filter !== 'all' ? 'No clients match your filters.' : 'No clients yet. Add your first client to get started.'}
                   </td>
                 </tr>
