@@ -8,6 +8,7 @@ export default function AddClientButton() {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [checkinUrl, setCheckinUrl] = useState('')
+  const [error, setError] = useState('')
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -42,6 +43,8 @@ export default function AddClientButton() {
 
     if (res.ok) {
       setCheckinUrl(data.checkin_url)
+    } else {
+      setError(data.error || 'Failed to create client')
     }
     setSaving(false)
   }
@@ -86,6 +89,7 @@ export default function AddClientButton() {
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-bold text-white mb-4">Add New Client</h3>
+        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <Input label="First Name" value={form.first_name} onChange={e => update('first_name', e.target.value)} required />

@@ -16,8 +16,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'First and last name required' }, { status: 400 })
     }
 
-    // Get user's org
-    const { data: membership } = await supabase
+    const adminSupabase = createAdminClient()
+
+    // Get user's org (use admin client to bypass RLS)
+    const { data: membership } = await adminSupabase
       .from('org_members')
       .select('organization_id')
       .eq('user_id', user.id)
@@ -26,8 +28,6 @@ export async function POST(request: NextRequest) {
     if (!membership) {
       return NextResponse.json({ error: 'No organization found' }, { status: 400 })
     }
-
-    const adminSupabase = createAdminClient()
 
     // Create client
     const { data: client, error } = await adminSupabase
