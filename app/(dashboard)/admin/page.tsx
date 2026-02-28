@@ -35,10 +35,16 @@ export default async function AdminPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <AdminPanel
-      orgId={orgId}
-      coaches={coaches || []}
-      clients={clients || []}
-    />
+    <div>
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold text-white tracking-wide">FORGED BY FREEDOM</h1>
+        <p className="text-sm text-[#D4A017] font-medium tracking-widest uppercase">Strength & Nutrition</p>
+      </div>
+      <AdminPanel
+        orgId={orgId}
+        coaches={coaches || []}
+        clients={clients || []}
+      />
+    </div>
   )
 }
