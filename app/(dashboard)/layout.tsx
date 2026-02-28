@@ -28,15 +28,23 @@ export default async function DashboardLayout({
     .single()
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      <DashboardNav
-        userName={profile?.full_name || profile?.email || user.email || 'Coach'}
-        orgName={(membership?.organizations as unknown as { name: string } | null)?.name || 'Organization'}
-        role={membership?.role || 'coach'}
+    <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.png"
+        alt=""
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] max-w-[700px] opacity-[0.03] pointer-events-none select-none z-0"
       />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {children}
-      </main>
+      <div className="relative z-10">
+        <DashboardNav
+          userName={profile?.full_name || profile?.email || user.email || 'Coach'}
+          orgName={(membership?.organizations as unknown as { name: string } | null)?.name || 'Organization'}
+          role={membership?.role || 'coach'}
+        />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

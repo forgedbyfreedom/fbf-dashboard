@@ -201,9 +201,17 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
   const inputClass = "w-full px-4 py-4 bg-[#141414] border border-[#2a2a2a] rounded-xl text-white text-lg placeholder-[#555]"
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-24">
+    <div className="min-h-screen bg-[#0a0a0a] pb-24 relative overflow-hidden">
+      {/* Watermark */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.png"
+        alt=""
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] max-w-[500px] opacity-[0.04] pointer-events-none select-none z-0"
+      />
+
       {/* Header */}
-      <div className="px-4 pt-6 pb-4 text-center">
+      <div className="relative z-10 px-4 pt-6 pb-4 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="Forged By Freedom" className="h-12 mx-auto mb-2" />
         <p className="text-white text-sm mt-1">Daily Check-in — {client.first_name}</p>
@@ -213,7 +221,7 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
       </div>
 
       {/* Progress bar */}
-      <div className="px-4 mb-6">
+      <div className="relative z-10 px-4 mb-6">
         <div className="flex gap-1.5">
           {steps.map((_, i) => (
             <div
@@ -230,7 +238,7 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
       </div>
 
       {/* Form sections */}
-      <div className="px-4 space-y-4">
+      <div className="relative z-10 px-4 space-y-4">
         {/* Step 1: Body & Wellness */}
         {step === 0 && (
           <>
