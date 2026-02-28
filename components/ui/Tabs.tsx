@@ -24,12 +24,12 @@ export default function Tabs({ tabs, defaultTab, onChange, children }: TabsProps
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-[#2a2a2a] mb-6">
+      <div className="flex gap-1 border-b border-[#2a2a2a] mb-6 overflow-x-auto scrollbar-hide">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleTabChange(tab.id)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
               activeTab === tab.id
                 ? 'text-[#FF6A00] border-[#FF6A00]'
                 : 'text-[#888] border-transparent hover:text-white'
