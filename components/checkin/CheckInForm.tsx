@@ -72,7 +72,7 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
     // Step 3: Activity
     steps: '',
     training_done: false,
-    training_type: '',
+    training_type: [] as string[],
     workout_notes: '',
     workout_description: '',
     rpe: '',
@@ -92,8 +92,18 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
 
   const [compoundLog, setCompoundLog] = useState<Array<{ compound: string; dose: string; route: string }>>([])
 
-  const update = (field: string, value: string | boolean) => {
+  const update = (field: string, value: string | boolean | string[]) => {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const toggleTrainingType = (type: string) => {
+    setForm(prev => {
+      const current = prev.training_type
+      if (current.includes(type)) {
+        return { ...prev, training_type: current.filter(t => t !== type) }
+      }
+      return { ...prev, training_type: [...current, type] }
+    })
   }
 
   // Check if today is the client's weigh-in day
@@ -126,6 +136,11 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
       if (val === '' || val === false) continue
       if (key === 'training_done' || key === 'supplement_compliance') {
         payload[key] = val
+        continue
+      }
+      if (key === 'training_type') {
+        const arr = val as string[]
+        if (arr.length > 0) payload[key] = arr.join(', ')
         continue
       }
       if (key === 'supplements_json') {
@@ -386,15 +401,22 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
                 )}
 
                 <div>
-                  <label className="block text-sm text-[#888] mb-2">Training Type</label>
+                  <label className="block text-sm text-[#888] mb-2">What did you train? (select all)</label>
                   <div className="flex gap-2 flex-wrap">
-                    {['Push', 'Pull', 'Legs', 'Upper', 'Lower', 'Full Body', 'Arms', 'Other'].map(t => (
-                      <button key={t} type="button" onClick={() => update('training_type', t)}
-                        className={`px-4 py-2.5 rounded-xl text-sm transition-colors ${
-                          form.training_type === t ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                    {[
+                      'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
+                      'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Traps',
+                      'Abs', 'Forearms', 'Cardio', 'Full Body',
+                    ].map(t => (
+                      <button key={t} type="button" onClick={() => toggleTrainingType(t)}
+                        className={`px-3.5 py-2.5 rounded-xl text-sm transition-colors ${
+                          form.training_type.includes(t) ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
                         }`}>{t}</button>
                     ))}
                   </div>
+                  {form.training_type.length > 0 && (
+                    <p className="text-xs text-[#FF6A00] mt-2">{form.training_type.join(', ')}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm text-[#888] mb-2">RPE (1-10)</label>
