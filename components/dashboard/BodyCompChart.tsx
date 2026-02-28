@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import ScanUpload from '@/components/dashboard/ScanUpload'
+import ScanAnalysisDisplay from '@/components/dashboard/ScanAnalysisDisplay'
 
 interface Scan {
   id: string
@@ -12,6 +14,8 @@ interface Scan {
   body_fat_pct: number | null
   lean_mass_lbs: number | null
   notes: string | null
+  analysis_text?: string | null
+  analysis_generated_at?: string | null
 }
 
 interface BodyCompChartProps {
@@ -23,6 +27,7 @@ export default function BodyCompChart({ clientId }: BodyCompChartProps) {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [selectedScanId, setSelectedScanId] = useState<string | null>(null)
   const [newScan, setNewScan] = useState({
     scan_date: new Date().toISOString().split('T')[0],
     scan_type: 'InBody',
@@ -78,6 +83,8 @@ export default function BodyCompChart({ clientId }: BodyCompChartProps) {
 
   const inputClass = "w-full px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white text-sm placeholder-[#555]"
 
+  const selectedScan = scans.find(s => s.id === selectedScanId)
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -86,6 +93,9 @@ export default function BodyCompChart({ clientId }: BodyCompChartProps) {
           {showForm ? 'Cancel' : 'Add Scan'}
         </Button>
       </div>
+
+      {/* AI Scan Upload */}
+      <ScanUpload clientId={clientId} onScanSaved={fetchScans} />
 
       {showForm && (
         <Card>
@@ -152,11 +162,30 @@ export default function BodyCompChart({ clientId }: BodyCompChartProps) {
                   <span className="text-[#888] w-16">{s.scan_type}</span>
                   {s.body_fat_pct != null && <span className="text-[#FF6A00]">BF: {s.body_fat_pct}%</span>}
                   {s.lean_mass_lbs != null && <span className="text-[#D4A017]">Lean: {s.lean_mass_lbs}lbs</span>}
-                  {s.notes && <span className="text-[#555] text-xs truncate">{s.notes}</span>}
+                  {s.notes && <span className="text-[#555] text-xs truncate flex-1">{s.notes}</span>}
+                  <button
+                    onClick={() => setSelectedScanId(selectedScanId === s.id ? null : s.id)}
+                    className={`text-xs ml-auto transition-colors ${
+                      selectedScanId === s.id ? 'text-[#D4A017]' : 'text-[#555] hover:text-[#D4A017]'
+                    }`}
+                  >
+                    {s.analysis_text ? 'View Analysis' : 'Analyze'}
+                  </button>
                 </div>
               ))}
             </div>
           </Card>
+
+          {/* Analysis display for selected scan */}
+          {selectedScan && (
+            <ScanAnalysisDisplay
+              clientId={clientId}
+              scanId={selectedScan.id}
+              existingAnalysis={selectedScan.analysis_text}
+              generatedAt={selectedScan.analysis_generated_at}
+              onAnalysisGenerated={fetchScans}
+            />
+          )}
         </>
       ) : (
         <Card>

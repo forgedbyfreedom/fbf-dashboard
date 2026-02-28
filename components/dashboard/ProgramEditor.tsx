@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import DropZone from '@/components/ui/DropZone'
 
 interface Exercise {
   name: string
@@ -102,6 +103,8 @@ export default function ProgramEditor({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [editingSection, setEditingSection] = useState<string | null>(null)
+  const [aiParsing, setAiParsing] = useState(false)
+  const [aiStatus, setAiStatus] = useState('')
 
   // Editable state for each section
   const [name, setName] = useState(programName)
@@ -119,6 +122,58 @@ export default function ProgramEditor({
   const [supplements, setSupplements] = useState<SupplementItem[]>(currentSupplements.length > 0 ? currentSupplements : [])
   const [peds, setPeds] = useState<PEDItem[]>(currentPeds.length > 0 ? currentPeds : [])
   const [peptides, setPeptides] = useState<PeptideItem[]>(currentPeptides.length > 0 ? currentPeptides : [])
+
+  const handleFileDrop = async (file: File) => {
+    setAiParsing(true)
+    setAiStatus('Uploading document...')
+    setError('')
+
+    try {
+      // Upload file
+      const formData = new FormData()
+      formData.append('file', file)
+      const uploadRes = await fetch(`/api/clients/${clientId}/documents`, {
+        method: 'POST',
+        body: formData,
+      })
+      if (!uploadRes.ok) throw new Error('Upload failed')
+      const { file_url, file_type } = await uploadRes.json()
+
+      // AI parse
+      setAiStatus('AI is reading your document...')
+      const parseRes = await fetch(`/api/clients/${clientId}/parse-document`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_url, file_type }),
+      })
+      const parseData = await parseRes.json()
+      if (!parseRes.ok) throw new Error(parseData.error || 'Parse failed')
+
+      const p = parseData.parsed
+      setAiStatus('Populating fields — review before saving')
+
+      // Populate all state from parsed data
+      if (p.programName) setName(p.programName)
+      if (p.targetCalories) setCalories(String(p.targetCalories))
+      if (p.targetProtein) setProtein(String(p.targetProtein))
+      if (p.targetCarbs) setCarbs(String(p.targetCarbs))
+      if (p.targetFats) setFats(String(p.targetFats))
+      if (p.targetWaterOz) setWaterOz(String(p.targetWaterOz))
+      if (p.workoutProgram?.length) setWorkouts(p.workoutProgram)
+      if (p.cardioProtocol?.length) setCardio(p.cardioProtocol)
+      if (p.mealPlan?.length) setMeals(p.mealPlan)
+      if (p.supplements?.length) setSupplements(p.supplements)
+      if (p.medicalProtocol?.length) setMedical(p.medicalProtocol)
+
+      // Open nutrition section for review
+      setEditingSection('nutrition')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse document')
+      setAiStatus('')
+    } finally {
+      setAiParsing(false)
+    }
+  }
 
   const saveSection = async (section: string, payload: Record<string, unknown>) => {
     setSaving(true)
@@ -159,6 +214,20 @@ export default function ProgramEditor({
 
   return (
     <div className="space-y-4">
+      {/* ===== AI DOCUMENT IMPORT ===== */}
+      <Card>
+        <h3 className="text-sm font-semibold text-[#D4A017] mb-3">Import from Document</h3>
+        <DropZone
+          onFileAccepted={handleFileDrop}
+          disabled={aiParsing}
+          label={aiParsing ? aiStatus : 'Drop a workout program PDF or image here'}
+          sublabel="AI will parse exercises, nutrition, supplements, and protocols"
+        />
+        {aiStatus && !aiParsing && (
+          <p className="text-xs text-green-400 mt-2">{aiStatus}</p>
+        )}
+      </Card>
+
       {error && (
         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">{error}</div>
       )}

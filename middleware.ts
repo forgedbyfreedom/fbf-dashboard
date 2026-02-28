@@ -35,7 +35,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/checkin/') ||
     pathname.startsWith('/api/checkin') ||
     pathname.startsWith('/api/links/validate') ||
-    pathname.startsWith('/api/webhooks/')
+    pathname.startsWith('/api/webhooks/') ||
+    pathname.startsWith('/api/cron/')
   ) {
     return supabaseResponse
   }

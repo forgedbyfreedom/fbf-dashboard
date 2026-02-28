@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(
   request: NextRequest,
@@ -13,8 +14,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify membership
-    const { data: member } = await supabase
+    const adminSupabase = createAdminClient()
+
+    // Verify membership (use admin to bypass RLS)
+    const { data: member } = await adminSupabase
       .from('chat_members')
       .select('id')
       .eq('channel_id', channelId)
@@ -30,7 +33,8 @@ export async function GET(
     const before = url.searchParams.get('before')
     const limit = parseInt(url.searchParams.get('limit') || '50')
 
-    let query = supabase
+    // Fetch messages (use admin to get all profiles in the join)
+    let query = adminSupabase
       .from('chat_messages')
       .select('id, content, created_at, user_id, profiles:user_id(full_name, avatar_url)')
       .eq('channel_id', channelId)

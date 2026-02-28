@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import DropZone from '@/components/ui/DropZone'
 import { parseProgram } from '@/lib/programParser'
 
 interface ProgramImportProps {
@@ -15,11 +16,61 @@ export default function ProgramImport({ clientId, onImported }: ProgramImportPro
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [preview, setPreview] = useState<ReturnType<typeof parseProgram> | null>(null)
+  const [importMode, setImportMode] = useState<'text' | 'file'>('text')
+  const [aiParsing, setAiParsing] = useState(false)
 
   const handleParse = () => {
     if (!rawText.trim()) return
     const parsed = parseProgram(rawText)
     setPreview(parsed)
+  }
+
+  const handleFileDrop = async (file: File) => {
+    setAiParsing(true)
+    setError('')
+
+    try {
+      // Upload
+      const formData = new FormData()
+      formData.append('file', file)
+      const uploadRes = await fetch(`/api/clients/${clientId}/documents`, {
+        method: 'POST',
+        body: formData,
+      })
+      if (!uploadRes.ok) throw new Error('Upload failed')
+      const { file_url, file_type } = await uploadRes.json()
+
+      // AI parse
+      const parseRes = await fetch(`/api/clients/${clientId}/parse-document`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_url, file_type }),
+      })
+      const parseData = await parseRes.json()
+      if (!parseRes.ok) throw new Error(parseData.error || 'Parse failed')
+
+      // Convert AI-parsed data to match parseProgram output format
+      const p = parseData.parsed
+      setPreview({
+        programName: p.programName || '',
+        clientName: p.clientName || '',
+        targetCalories: p.targetCalories || null,
+        targetProtein: p.targetProtein || null,
+        targetCarbs: p.targetCarbs || null,
+        targetFats: p.targetFats || null,
+        targetWaterOz: p.targetWaterOz || null,
+        workoutProgram: p.workoutProgram || [],
+        cardioProtocol: p.cardioProtocol || [],
+        mealPlan: p.mealPlan || [],
+        supplements: p.supplements || [],
+        medicalProtocol: p.medicalProtocol || [],
+      })
+      setRawText(parseData.raw_text || '')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse file')
+    } finally {
+      setAiParsing(false)
+    }
   }
 
   const handleImport = async () => {
@@ -63,20 +114,59 @@ export default function ProgramImport({ clientId, onImported }: ProgramImportPro
         <>
           <Card>
             <h3 className="text-sm font-semibold text-[#D4A017] mb-3">Import FBF Program</h3>
-            <p className="text-xs text-[#555] mb-3">
-              Paste the full program text below. Exercises, nutrition targets, supplements, and medical protocols will be auto-parsed.
-            </p>
-            <textarea
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-white text-sm placeholder-[#555] min-h-[200px] font-mono"
-              placeholder="Paste your FBF program document here..."
-            />
-            <div className="mt-3">
-              <Button onClick={handleParse} disabled={!rawText.trim()}>
-                Parse Program
-              </Button>
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setImportMode('text')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  importMode === 'text' ? 'bg-[#FF6A00] text-white' : 'bg-[#0a0a0a] text-[#888] hover:text-white'
+                }`}
+              >
+                Paste Text
+              </button>
+              <button
+                onClick={() => setImportMode('file')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  importMode === 'file' ? 'bg-[#FF6A00] text-white' : 'bg-[#0a0a0a] text-[#888] hover:text-white'
+                }`}
+              >
+                Upload File
+              </button>
             </div>
+
+            {importMode === 'text' ? (
+              <>
+                <p className="text-xs text-[#555] mb-3">
+                  Paste the full program text below. Exercises, nutrition targets, supplements, and medical protocols will be auto-parsed.
+                </p>
+                <textarea
+                  value={rawText}
+                  onChange={(e) => setRawText(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-white text-sm placeholder-[#555] min-h-[200px] font-mono"
+                  placeholder="Paste your FBF program document here..."
+                />
+                <div className="mt-3">
+                  <Button onClick={handleParse} disabled={!rawText.trim()}>
+                    Parse Program
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-[#555] mb-3">
+                  Upload a program document and AI will extract all exercises, nutrition, and protocols.
+                </p>
+                <DropZone
+                  onFileAccepted={handleFileDrop}
+                  disabled={aiParsing}
+                  label={aiParsing ? 'AI is parsing your document...' : 'Drop a program PDF or image here'}
+                  sublabel="PDF or image up to 20MB"
+                />
+              </>
+            )}
+
+            {error && (
+              <p className="text-xs text-red-400 mt-2">{error}</p>
+            )}
           </Card>
         </>
       ) : (

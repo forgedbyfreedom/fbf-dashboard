@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Link creation failed: ${error.message}` }, { status: 500 })
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fbf-dashboard.vercel.app'
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host') || 'localhost:3000'}`).trim().replace(/\/+$/, '')
     const checkinUrl = `${appUrl}/checkin/${rawToken}`
 
     return NextResponse.json({ checkin_url: checkinUrl })

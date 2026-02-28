@@ -13,6 +13,7 @@ import Button from '@/components/ui/Button'
 import ProgramImport from '@/components/dashboard/ProgramImport'
 import ProgramEditor from '@/components/dashboard/ProgramEditor'
 import BodyCompChart from '@/components/dashboard/BodyCompChart'
+import ReportsList from '@/components/dashboard/ReportsList'
 
 interface ProtocolItem {
   [key: string]: string
@@ -150,6 +151,7 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
     { id: 'trends', label: 'Trends' },
     { id: 'timeline', label: 'Timeline' },
     { id: 'notes', label: 'Notes' },
+    { id: 'reports', label: 'Reports' },
     { id: 'settings', label: 'Settings' },
   ]
 
@@ -480,6 +482,10 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
             )}
 
             {activeTab === 'notes' && <CoachNotes clientId={client.id} initialNotes={notes} />}
+
+            {activeTab === 'reports' && (
+              <ReportsList clientId={client.id} />
+            )}
 
             {activeTab === 'settings' && (
               <div className="space-y-4">

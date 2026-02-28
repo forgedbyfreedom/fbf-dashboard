@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       token_hash: tokenHash,
     })
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host') || 'localhost:3000'}`).trim().replace(/\/+$/, '')
     const checkinUrl = `${appUrl}/checkin/${rawToken}`
 
     // Trigger webhook (fire and forget)

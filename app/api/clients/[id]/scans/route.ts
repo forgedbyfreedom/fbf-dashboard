@@ -44,7 +44,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { scan_date, scan_type, body_fat_pct, lean_mass_lbs, notes } = body
+    const { scan_date, scan_type, body_fat_pct, lean_mass_lbs, notes, file_url } = body
 
     if (!scan_date || !scan_type) {
       return NextResponse.json({ error: 'scan_date and scan_type are required' }, { status: 400 })
@@ -60,6 +60,7 @@ export async function POST(
         body_fat_pct: body_fat_pct ? parseFloat(body_fat_pct) : null,
         lean_mass_lbs: lean_mass_lbs ? parseFloat(lean_mass_lbs) : null,
         notes: notes || null,
+        file_url: file_url || null,
       })
       .select()
       .single()

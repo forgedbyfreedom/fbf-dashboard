@@ -30,6 +30,8 @@ export default function ChatRoom() {
   const [sending, setSending] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showNewDM, setShowNewDM] = useState(false)
+  const [creatingDM, setCreatingDM] = useState(false)
+  const [dmError, setDmError] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabaseRef = useRef(createClient())
@@ -161,7 +163,8 @@ export default function ChatRoom() {
   }
 
   const handleNewDM = async (targetUserId: string) => {
-    setShowNewDM(false)
+    setCreatingDM(true)
+    setDmError('')
     try {
       const res = await fetch('/api/chat/channels', {
         method: 'POST',
@@ -169,7 +172,13 @@ export default function ChatRoom() {
         body: JSON.stringify({ target_user_id: targetUserId }),
       })
       const data = await res.json()
-      if (res.ok && data.channel) {
+      if (!res.ok) {
+        setDmError(data.error || 'Failed to create conversation')
+        setCreatingDM(false)
+        return
+      }
+      if (data.channel) {
+        setShowNewDM(false)
         // Refresh channel list
         const chRes = await fetch('/api/chat/channels')
         const chData = await chRes.json()
@@ -178,6 +187,9 @@ export default function ChatRoom() {
       }
     } catch (err) {
       console.error('Failed to create DM:', err)
+      setDmError('Something went wrong. Please try again.')
+    } finally {
+      setCreatingDM(false)
     }
   }
 
@@ -281,7 +293,9 @@ export default function ChatRoom() {
       {showNewDM && (
         <NewDMModal
           onSelect={handleNewDM}
-          onClose={() => setShowNewDM(false)}
+          onClose={() => { setShowNewDM(false); setDmError('') }}
+          creating={creatingDM}
+          error={dmError}
         />
       )}
     </div>
