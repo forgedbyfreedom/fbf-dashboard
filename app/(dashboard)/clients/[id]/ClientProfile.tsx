@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Tabs from '@/components/ui/Tabs'
 import Card from '@/components/ui/Card'
@@ -8,6 +9,7 @@ import TrendCharts from '@/components/dashboard/TrendCharts'
 import Timeline from '@/components/dashboard/Timeline'
 import CoachNotes from '@/components/dashboard/CoachNotes'
 import FlagBadge from '@/components/dashboard/FlagBadge'
+import Button from '@/components/ui/Button'
 import ProgramImport from '@/components/dashboard/ProgramImport'
 import ProgramEditor from '@/components/dashboard/ProgramEditor'
 
@@ -110,6 +112,33 @@ interface ClientProfileProps {
 export default function ClientProfile({ client, checkins, flags, notes, links, metrics }: ClientProfileProps) {
   const router = useRouter()
   const latest = checkins[0] || null
+  const [generatedUrl, setGeneratedUrl] = useState('')
+  const [generatingLink, setGeneratingLink] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+
+  const handleGenerateLink = async () => {
+    setGeneratingLink(true)
+    try {
+      const res = await fetch('/api/clients/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: client.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setGeneratedUrl(data.checkin_url)
+    } catch (err) {
+      console.error('Failed to generate link:', err)
+    } finally {
+      setGeneratingLink(false)
+    }
+  }
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(generatedUrl)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
+  }
 
   const tabs = [
     { id: 'latest', label: 'Latest' },
@@ -459,9 +488,9 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                 </Card>
 
                 <Card>
-                  <h3 className="text-sm font-semibold text-[#888] mb-4">Magic Links</h3>
-                  {links.length > 0 ? (
-                    <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-[#888] mb-4">Check-in Link</h3>
+                  {links.length > 0 && (
+                    <div className="space-y-2 mb-4">
                       {links.map(link => (
                         <div key={link.id} className="flex items-center justify-between text-sm">
                           <div>
@@ -478,9 +507,31 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-sm text-[#555]">No active links.</p>
                   )}
+
+                  {generatedUrl ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg">
+                        <p className="text-xs text-[#888] mb-1">Client Check-in URL:</p>
+                        <p className="text-sm text-[#FF6A00] break-all">{generatedUrl}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={copyLink}>
+                          {linkCopied ? 'Copied!' : 'Copy Link'}
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={handleGenerateLink} disabled={generatingLink}>
+                          Regenerate
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button size="sm" onClick={handleGenerateLink} disabled={generatingLink}>
+                      {generatingLink ? 'Generating...' : 'Generate New Check-in Link'}
+                    </Button>
+                  )}
+                  <p className="text-xs text-[#555] mt-3">
+                    Send this link to {client.first_name}. No login required — they open it and check in.
+                  </p>
                 </Card>
               </div>
             )}
