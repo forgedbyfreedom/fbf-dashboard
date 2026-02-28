@@ -33,7 +33,7 @@ export default async function DashboardLayout({
       <img
         src="/logo.png"
         alt=""
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] max-w-[700px] opacity-[0.03] pointer-events-none select-none z-0"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] max-w-[700px] opacity-[0.07] pointer-events-none select-none z-0"
       />
       <div className="relative z-10">
         <DashboardNav
