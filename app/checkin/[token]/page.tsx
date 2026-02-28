@@ -15,6 +15,7 @@ interface ClientInfo {
   current_supplements?: Array<{ name: string; dose: string; frequency: string }>
   current_peds?: Array<{ compound: string; dose: string; frequency: string; route: string }>
   current_peptides?: Array<{ name: string; dose: string; frequency: string; timing: string }>
+  last_weight?: number | null
 }
 
 export default function CheckInPage() {

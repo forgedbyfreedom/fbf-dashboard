@@ -35,6 +35,13 @@ export async function POST(request: NextRequest) {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', link.id)
 
+    // Get latest weight from metrics
+    const { data: metrics } = await supabase
+      .from('client_metrics')
+      .select('weight_current')
+      .eq('client_id', link.clients.id)
+      .single()
+
     return NextResponse.json({
       client: {
         id: link.clients.id,
@@ -52,6 +59,7 @@ export async function POST(request: NextRequest) {
         medical_protocol: link.clients.medical_protocol || [],
         target_carbs: link.clients.target_carbs,
         target_fats: link.clients.target_fats,
+        last_weight: metrics?.weight_current || null,
       },
     })
   } catch {

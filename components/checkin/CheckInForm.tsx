@@ -43,6 +43,7 @@ interface ClientInfo {
   medical_protocol?: Array<{ name: string; dose: string; frequency: string; notes: string }>
   target_carbs?: number | null
   target_fats?: number | null
+  last_weight?: number | null
 }
 
 interface CheckInFormProps {
@@ -91,6 +92,43 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
   })
 
   const [compoundLog, setCompoundLog] = useState<Array<{ compound: string; dose: string; route: string }>>([])
+
+  // BJJ state
+  const [bjjDone, setBjjDone] = useState(false)
+  const [bjjType, setBjjType] = useState<'class' | 'open_mat' | ''>('')
+  const [bjjRounds, setBjjRounds] = useState('')
+  const [bjjRoundMin, setBjjRoundMin] = useState('5')
+  const [bjjRestMin, setBjjRestMin] = useState('1')
+  const [bjjDrillMin, setBjjDrillMin] = useState('')
+  const [bjjIntensity, setBjjIntensity] = useState<'light' | 'moderate' | 'hard'>('moderate')
+
+  // BJJ calorie estimation using MET values and user weight
+  // Light drilling: ~5 MET, Moderate rolling: ~8 MET, Hard sparring: ~10 MET
+  const estimateBjjCalories = () => {
+    const weightLbs = parseFloat(form.weight_lbs) || client.last_weight || 185
+    const weightKg = weightLbs / 2.205
+
+    const metValues = { light: 5, moderate: 8, hard: 10 }
+    const met = metValues[bjjIntensity]
+    const restMet = 2.5 // active rest between rounds
+
+    const rounds = parseInt(bjjRounds) || 0
+    const roundMin = parseFloat(bjjRoundMin) || 5
+    const restMin = parseFloat(bjjRestMin) || 1
+    const drillMin = parseFloat(bjjDrillMin) || 0
+
+    // Rolling calories: MET × weight_kg × hours
+    const rollingHours = (rounds * roundMin) / 60
+    const restHours = (rounds > 0 ? (rounds - 1) * restMin : 0) / 60
+    const drillHours = drillMin / 60
+
+    const rollingCal = Math.round(met * weightKg * rollingHours)
+    const restCal = Math.round(restMet * weightKg * restHours)
+    const drillCal = Math.round(5 * weightKg * drillHours) // drilling = light MET
+
+    return rollingCal + restCal + drillCal
+  }
+
 
   const update = (field: string, value: string | boolean | string[]) => {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -163,6 +201,25 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
 
     // Always send supplement_compliance
     payload.supplement_compliance = form.supplement_compliance
+
+    // Append BJJ data to workout description and calorie burn
+    if (bjjDone && bjjType) {
+      const bjjCal = estimateBjjCalories()
+      const bjjLabel = bjjType === 'class' ? 'BJJ Class' : 'BJJ Open Mat'
+      const bjjDesc = `${bjjLabel}: ${bjjRounds} rounds × ${bjjRoundMin}min (${bjjRestMin}min rest), intensity: ${bjjIntensity}${bjjDrillMin ? `, ${bjjDrillMin}min drilling` : ''}`
+
+      // Append to workout description
+      const existing = (payload.workout_description as string) || ''
+      payload.workout_description = existing ? `${existing}\n${bjjDesc}` : bjjDesc
+
+      // Add BJJ training type
+      const types = (payload.training_type as string) || ''
+      payload.training_type = types ? `${types}, BJJ` : 'BJJ'
+
+      // Add BJJ calories to estimated burn
+      const existingCal = (payload.estimated_calories_burned as number) || 0
+      payload.estimated_calories_burned = existingCal + bjjCal
+    }
 
     try {
       const res = await fetch('/api/checkin', {
@@ -457,6 +514,130 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
               <input type="number" inputMode="numeric" value={form.cardio_minutes}
                 onChange={e => update('cardio_minutes', e.target.value)} className={inputClass} placeholder="30" />
             </div>
+
+            {/* BJJ Section */}
+            <div className="pt-2 border-t border-[#2a2a2a]">
+              <label className="block text-sm text-[#888] mb-3">Did you do BJJ today?</label>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setBjjDone(true)}
+                  className={`flex-1 py-4 rounded-xl text-sm font-medium transition-colors ${
+                    bjjDone ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                  }`}>Yes</button>
+                <button type="button" onClick={() => { setBjjDone(false); setBjjType('') }}
+                  className={`flex-1 py-4 rounded-xl text-sm font-medium transition-colors ${
+                    !bjjDone ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                  }`}>No</button>
+              </div>
+            </div>
+
+            {bjjDone && (
+              <>
+                <div>
+                  <label className="block text-sm text-[#888] mb-2">Session Type</label>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setBjjType('class')}
+                      className={`flex-1 py-4 rounded-xl text-sm font-medium transition-colors ${
+                        bjjType === 'class' ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                      }`}>
+                      <span className="block text-lg">Class</span>
+                      <span className="block text-xs mt-0.5 opacity-70">Instruction + rolling</span>
+                    </button>
+                    <button type="button" onClick={() => setBjjType('open_mat')}
+                      className={`flex-1 py-4 rounded-xl text-sm font-medium transition-colors ${
+                        bjjType === 'open_mat' ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                      }`}>
+                      <span className="block text-lg">Open Mat</span>
+                      <span className="block text-xs mt-0.5 opacity-70">Free rolling / sparring</span>
+                    </button>
+                  </div>
+                </div>
+
+                {bjjType && (
+                  <>
+                    {bjjType === 'class' && (
+                      <div>
+                        <label className="block text-sm text-[#888] mb-2">Drilling / Instruction Time (minutes)</label>
+                        <input type="number" inputMode="numeric" value={bjjDrillMin}
+                          onChange={e => setBjjDrillMin(e.target.value)} className={inputClass} placeholder="30" />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm text-[#888] mb-2">Number of Rounds</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                          <button key={n} type="button" onClick={() => setBjjRounds(String(n))}
+                            className={`w-12 h-12 rounded-xl text-sm font-medium transition-colors ${
+                              bjjRounds === String(n) ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                            }`}>{n}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm text-[#888] mb-2">Round Length (min)</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {['3','4','5','6','7','8','10'].map(n => (
+                            <button key={n} type="button" onClick={() => setBjjRoundMin(n)}
+                              className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                                bjjRoundMin === n ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                              }`}>{n}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-[#888] mb-2">Rest Between (min)</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {['0','0.5','1','1.5','2','3'].map(n => (
+                            <button key={n} type="button" onClick={() => setBjjRestMin(n)}
+                              className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                                bjjRestMin === n ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                              }`}>{n === '0.5' ? '30s' : `${n}`}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-[#888] mb-2">Intensity</label>
+                      <div className="flex gap-3">
+                        {([
+                          { val: 'light' as const, label: 'Light', sub: 'Flow rolling / positional' },
+                          { val: 'moderate' as const, label: 'Moderate', sub: 'Standard pace' },
+                          { val: 'hard' as const, label: 'Hard', sub: 'Competition pace' },
+                        ]).map(opt => (
+                          <button key={opt.val} type="button" onClick={() => setBjjIntensity(opt.val)}
+                            className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
+                              bjjIntensity === opt.val ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                            }`}>
+                            <span className="block">{opt.label}</span>
+                            <span className="block text-xs mt-0.5 opacity-70">{opt.sub}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Calorie estimate */}
+                    {bjjRounds && (
+                      <div className="bg-[#141414] border border-[#D4A017]/30 rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-[#D4A017] font-semibold">Estimated BJJ Burn</p>
+                            <p className="text-xs text-[#888] mt-1">
+                              {bjjRounds} rounds x {bjjRoundMin}min @ {bjjIntensity}
+                              {bjjDrillMin ? ` + ${bjjDrillMin}min drilling` : ''}
+                              {' '}({parseFloat(form.weight_lbs) || client.last_weight || 185}lbs)
+                            </p>
+                          </div>
+                          <p className="text-2xl font-bold text-[#D4A017]">~{estimateBjjCalories()} cal</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </>
         )}
 
