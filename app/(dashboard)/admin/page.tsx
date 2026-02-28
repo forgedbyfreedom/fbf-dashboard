@@ -24,7 +24,7 @@ export default async function AdminPage() {
   // Get all coaches in org
   const { data: coaches } = await supabase
     .from('org_members')
-    .select('*, profiles(id, full_name, email)')
+    .select('*, profiles(id, full_name, email, avatar_url)')
     .eq('organization_id', orgId)
 
   // Get all clients in org
@@ -37,8 +37,8 @@ export default async function AdminPage() {
   return (
     <div>
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-white tracking-wide">FORGED BY FREEDOM</h1>
-        <p className="text-sm text-[#D4A017] font-medium tracking-widest uppercase">Strength & Nutrition</p>
+        <h1 className="text-4xl font-black text-white tracking-widest">FORGED BY FREEDOM</h1>
+        <p className="text-xs text-[#D4A017] font-semibold tracking-[0.3em] uppercase mt-2">Strength &bull; Discipline &bull; Freedom</p>
       </div>
       <AdminPanel
         orgId={orgId}

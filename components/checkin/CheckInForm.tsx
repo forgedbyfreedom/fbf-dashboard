@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 import MoodSelector from '@/components/checkin/MoodSelector'
 import WaterTracker from '@/components/checkin/WaterTracker'
 import VoiceInput from '@/components/checkin/VoiceInput'
 import CompoundLogger from '@/components/checkin/CompoundLogger'
+import PhotoUpload from '@/components/checkin/PhotoUpload'
 
 interface SupplementItem {
   name: string
@@ -101,6 +102,49 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
   const [bjjRestMin, setBjjRestMin] = useState('1')
   const [bjjDrillMin, setBjjDrillMin] = useState('')
   const [bjjIntensity, setBjjIntensity] = useState<'light' | 'moderate' | 'hard'>('moderate')
+
+  // Progress photos
+  const [progressPhotoUrls, setProgressPhotoUrls] = useState<string[]>([])
+
+  // Draft auto-save
+  const [draftRestored, setDraftRestored] = useState(false)
+  const draftKey = `fbf-checkin-draft-${client.id}-${new Date().toISOString().split('T')[0]}`
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(draftKey)
+      if (saved) {
+        const draft = JSON.parse(saved)
+        if (draft.form) setForm(prev => ({ ...prev, ...draft.form }))
+        if (draft.bjj) {
+          setBjjDone(draft.bjj.done || false)
+          setBjjType(draft.bjj.type || '')
+          setBjjRounds(draft.bjj.rounds || '')
+          setBjjRoundMin(draft.bjj.roundMin || '5')
+          setBjjRestMin(draft.bjj.restMin || '1')
+          setBjjDrillMin(draft.bjj.drillMin || '')
+          setBjjIntensity(draft.bjj.intensity || 'moderate')
+        }
+        if (draft.compoundLog) setCompoundLog(draft.compoundLog)
+        setDraftRestored(true)
+        setTimeout(() => setDraftRestored(false), 4000)
+      }
+    } catch { /* ignore corrupt drafts */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Save draft on change
+  useEffect(() => {
+    try {
+      const draft = {
+        form,
+        bjj: { done: bjjDone, type: bjjType, rounds: bjjRounds, roundMin: bjjRoundMin, restMin: bjjRestMin, drillMin: bjjDrillMin, intensity: bjjIntensity },
+        compoundLog,
+      }
+      localStorage.setItem(draftKey, JSON.stringify(draft))
+    } catch { /* ignore storage full */ }
+  }, [form, bjjDone, bjjType, bjjRounds, bjjRoundMin, bjjRestMin, bjjDrillMin, bjjIntensity, compoundLog, draftKey])
 
   // BJJ calorie estimation using MET values and user weight
   // Light drilling: ~5 MET, Moderate rolling: ~8 MET, Hard sparring: ~10 MET
@@ -221,6 +265,11 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
       payload.estimated_calories_burned = existingCal + bjjCal
     }
 
+    // Include progress photos
+    if (progressPhotoUrls.length > 0) {
+      payload.progress_photo_urls = progressPhotoUrls
+    }
+
     try {
       const res = await fetch('/api/checkin', {
         method: 'POST',
@@ -229,6 +278,7 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to submit')
+      try { localStorage.removeItem(draftKey) } catch { /* ignore */ }
       setSubmitted(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -270,9 +320,9 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
       {/* Header */}
       <div className="relative z-10 px-4 pt-6 pb-4 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="Forged By Freedom" className="h-16 mx-auto mb-3" />
-        <h1 className="text-xl font-bold text-white tracking-wide">FORGED BY FREEDOM</h1>
-        <p className="text-sm text-[#D4A017] font-medium tracking-widest uppercase">Strength & Nutrition</p>
+        <img src="/logo.png" alt="Forged By Freedom" className="h-20 mx-auto mb-3" />
+        <h1 className="text-3xl font-black text-white tracking-widest">FORGED BY FREEDOM</h1>
+        <p className="text-xs text-[#D4A017] font-semibold tracking-[0.3em] uppercase mt-2">Strength &bull; Discipline &bull; Freedom</p>
         <p className="text-white text-sm mt-3">Daily Check-in — {client.first_name}</p>
         <p className="text-[#555] text-xs mt-1">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -295,6 +345,16 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
           Step {step + 1}/{steps.length} — {steps[step].title}: {steps[step].subtitle}
         </p>
       </div>
+
+      {/* Draft restored banner */}
+      {draftRestored && (
+        <div className="relative z-10 px-4 mb-4">
+          <div className="p-3 bg-[#FF6A00]/10 border border-[#FF6A00]/20 rounded-xl text-sm text-[#FF6A00] flex items-center justify-between">
+            <span>Draft restored from earlier today</span>
+            <button onClick={() => setDraftRestored(false)} className="text-[#FF6A00]/60 hover:text-[#FF6A00]">x</button>
+          </div>
+        </div>
+      )}
 
       {/* Form sections */}
       <div className="relative z-10 px-4 space-y-4">
@@ -703,22 +763,6 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
               </div>
             </div>
 
-            {/* Assigned supplement protocol (read-only reference) */}
-            {client.current_supplements && client.current_supplements.length > 0 && (
-              <div>
-                <label className="block text-sm text-[#D4A017] mb-2 font-semibold">Your Supplement Protocol</label>
-                <div className="space-y-1.5">
-                  {client.current_supplements.map((supp, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2.5 bg-[#141414] border border-[#2a2a2a] rounded-xl">
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                      <span className="text-white text-sm">{supp.name}</span>
-                      <span className="text-[#555] text-xs">{supp.dose} — {supp.frequency}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-sm text-[#888] mb-2">Supplement Notes</label>
               <textarea
@@ -771,9 +815,7 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
               <textarea value={form.general_notes} onChange={e => update('general_notes', e.target.value)}
                 className={`${inputClass} min-h-[120px] text-base`} placeholder="How are you feeling? Anything your coach should know?" />
             </div>
-            <div>
-              <p className="text-sm text-[#555]">Progress photo upload coming soon</p>
-            </div>
+            <PhotoUpload token={token} onPhotosChange={setProgressPhotoUrls} />
           </>
         )}
       </div>

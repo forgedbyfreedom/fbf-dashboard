@@ -1,27 +1,22 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import ProfileMenu from '@/components/dashboard/ProfileMenu'
 
 interface DashboardNavProps {
   userName: string
   orgName: string
   role: string
+  avatarUrl?: string | null
 }
 
-export default function DashboardNav({ userName, orgName, role }: DashboardNavProps) {
+export default function DashboardNav({ userName, orgName, role, avatarUrl }: DashboardNavProps) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
-
   const links = [
     { href: '/', label: 'Dashboard' },
+    { href: '/chat', label: 'Chat' },
     ...(role === 'org_admin' ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 
@@ -38,8 +33,8 @@ export default function DashboardNav({ userName, orgName, role }: DashboardNavPr
                 className="h-10"
               />
               <div className="hidden md:block">
-                <p className="text-sm font-bold text-white tracking-wide leading-tight">FORGED BY FREEDOM</p>
-                <p className="text-[10px] text-[#D4A017] tracking-widest uppercase leading-tight">Strength & Nutrition</p>
+                <p className="text-sm font-black text-white tracking-widest leading-tight">FORGED BY FREEDOM</p>
+                <p className="text-[10px] text-[#D4A017] font-semibold tracking-[0.2em] uppercase leading-tight">Strength &bull; Discipline &bull; Freedom</p>
               </div>
             </div>
             <div className="flex gap-1">
@@ -56,6 +51,14 @@ export default function DashboardNav({ userName, orgName, role }: DashboardNavPr
                   {link.label}
                 </button>
               ))}
+              <a
+                href="https://forgedbyfreedom.org/ai-coach"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-[#D4A017] hover:text-[#FF6A00] transition-colors"
+              >
+                Bloodwork AI
+              </a>
             </div>
           </div>
 
@@ -64,12 +67,7 @@ export default function DashboardNav({ userName, orgName, role }: DashboardNavPr
               <p className="text-sm text-white">{userName}</p>
               <p className="text-xs text-[#555]">{orgName}</p>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="px-3 py-1.5 text-xs text-[#888] hover:text-white transition-colors"
-            >
-              Sign out
-            </button>
+            <ProfileMenu userName={userName} avatarUrl={avatarUrl} />
           </div>
         </div>
       </div>

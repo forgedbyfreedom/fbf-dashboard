@@ -12,6 +12,7 @@ import FlagBadge from '@/components/dashboard/FlagBadge'
 import Button from '@/components/ui/Button'
 import ProgramImport from '@/components/dashboard/ProgramImport'
 import ProgramEditor from '@/components/dashboard/ProgramEditor'
+import BodyCompChart from '@/components/dashboard/BodyCompChart'
 
 interface ProtocolItem {
   [key: string]: string
@@ -70,6 +71,7 @@ interface ClientProfileProps {
     stress_level: number | null
     estimated_calories_burned: number | null
     supplement_compliance: boolean | null
+    progress_photo_urls: string[] | null
   }>
   flags: Array<{
     id: string
@@ -434,16 +436,48 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
             )}
 
             {activeTab === 'trends' && (
-                  <TrendCharts
-                    checkins={checkins}
-                    targetCalories={client.target_calories}
-                    targetProtein={client.target_protein}
-                    targetSteps={client.target_steps}
-                    targetWaterOz={client.target_water_oz}
-                  />
+                  <div className="space-y-6">
+                    <TrendCharts
+                      checkins={checkins}
+                      targetCalories={client.target_calories}
+                      targetProtein={client.target_protein}
+                      targetSteps={client.target_steps}
+                      targetWaterOz={client.target_water_oz}
+                    />
+                    <BodyCompChart clientId={client.id} />
+                  </div>
                 )}
 
-            {activeTab === 'timeline' && <Timeline checkins={checkins} />}
+            {activeTab === 'timeline' && (
+              <div className="space-y-4">
+                <Timeline checkins={checkins} />
+                {/* Progress Photos */}
+                {checkins.some(c => c.progress_photo_urls && c.progress_photo_urls.length > 0) && (
+                  <Card>
+                    <h3 className="text-sm font-semibold text-[#888] mb-4">Progress Photos</h3>
+                    <div className="space-y-4">
+                      {checkins
+                        .filter(c => c.progress_photo_urls && c.progress_photo_urls.length > 0)
+                        .map(c => (
+                          <div key={c.id}>
+                            <p className="text-xs text-[#555] mb-2">
+                              {new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            </p>
+                            <div className="flex gap-2 flex-wrap">
+                              {c.progress_photo_urls!.map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block w-28 h-28 rounded-lg overflow-hidden border border-[#2a2a2a] hover:border-[#FF6A00] transition-colors">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={url} alt={`Progress ${i + 1}`} className="w-full h-full object-cover" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </Card>
+                )}
+              </div>
+            )}
 
             {activeTab === 'notes' && <CoachNotes clientId={client.id} initialNotes={notes} />}
 
@@ -493,6 +527,24 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                       <p className="text-white">{client.target_steps?.toLocaleString() || '—'}</p>
                     </div>
                   </div>
+                </Card>
+
+                <Card>
+                  <h3 className="text-sm font-semibold text-[#888] mb-4">Bloodwork Analyzer</h3>
+                  <p className="text-sm text-[#ccc] mb-3">
+                    Use the AI-powered bloodwork analyzer to review {client.first_name}&apos;s labs.
+                  </p>
+                  <a
+                    href="https://forgedbyfreedom.org/ai-coach"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#D4A017]/10 border border-[#D4A017]/30 rounded-lg text-sm text-[#D4A017] hover:bg-[#D4A017]/20 transition-colors"
+                  >
+                    Open Bloodwork AI
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
                 </Card>
 
                 <Card>

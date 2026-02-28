@@ -9,7 +9,7 @@ import Badge from '@/components/ui/Badge'
 interface Coach {
   user_id: string
   role: string
-  profiles: { id: string; full_name: string | null; email: string }
+  profiles: { id: string; full_name: string | null; email: string; avatar_url?: string | null }
 }
 
 interface ClientAssignment {
@@ -87,9 +87,21 @@ export default function AdminPanel({ orgId, coaches, clients: initialClients }: 
         <div className="space-y-3">
           {coaches.map(coach => (
             <div key={coach.user_id} className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white">{coach.profiles.full_name || coach.profiles.email}</p>
-                <p className="text-xs text-[#555]">{coach.profiles.email}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-[#FF6A00]/10 flex items-center justify-center">
+                  {coach.profiles.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={coach.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-[#FF6A00]">
+                      {(coach.profiles.full_name || coach.profiles.email)[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-white">{coach.profiles.full_name || coach.profiles.email}</p>
+                  <p className="text-xs text-[#555]">{coach.profiles.email}</p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant="muted">{coachClientCounts[coach.user_id] || 0} clients</Badge>

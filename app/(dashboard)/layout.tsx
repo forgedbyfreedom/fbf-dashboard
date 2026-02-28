@@ -23,7 +23,7 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, email')
+    .select('full_name, email, avatar_url')
     .eq('id', user.id)
     .single()
 
@@ -40,6 +40,7 @@ export default async function DashboardLayout({
           userName={profile?.full_name || profile?.email || user.email || 'Coach'}
           orgName={(membership?.organizations as unknown as { name: string } | null)?.name || 'Organization'}
           role={membership?.role || 'coach'}
+          avatarUrl={profile?.avatar_url}
         />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {children}

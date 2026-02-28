@@ -28,7 +28,18 @@ export default async function ClientPortalLayout({
     <div className="min-h-screen bg-[#0a0a0a]">
       <nav className="border-b border-[#2a2a2a] bg-[#141414]">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-[#FF6A00] tracking-wider">FBF</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-bold text-[#FF6A00] tracking-wider">FBF</h1>
+            <a href="/portal/chat" className="text-sm text-[#888] hover:text-white transition-colors">Chat</a>
+            <a
+              href="https://forgedbyfreedom.org/ai-coach"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-[#D4A017] hover:text-[#FF6A00] transition-colors"
+            >
+              Bloodwork AI
+            </a>
+          </div>
           <div className="text-sm text-white">
             {client.first_name} {client.last_name}
           </div>
