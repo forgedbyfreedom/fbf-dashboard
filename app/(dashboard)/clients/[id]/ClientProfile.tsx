@@ -433,7 +433,15 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
               />
             )}
 
-            {activeTab === 'trends' && <TrendCharts checkins={checkins} />}
+            {activeTab === 'trends' && (
+                  <TrendCharts
+                    checkins={checkins}
+                    targetCalories={client.target_calories}
+                    targetProtein={client.target_protein}
+                    targetSteps={client.target_steps}
+                    targetWaterOz={client.target_water_oz}
+                  />
+                )}
 
             {activeTab === 'timeline' && <Timeline checkins={checkins} />}
 
