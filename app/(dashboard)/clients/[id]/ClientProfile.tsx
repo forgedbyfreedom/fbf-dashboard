@@ -9,6 +9,7 @@ import Timeline from '@/components/dashboard/Timeline'
 import CoachNotes from '@/components/dashboard/CoachNotes'
 import FlagBadge from '@/components/dashboard/FlagBadge'
 import ProgramImport from '@/components/dashboard/ProgramImport'
+import ProgramEditor from '@/components/dashboard/ProgramEditor'
 
 interface ProtocolItem {
   [key: string]: string
@@ -358,167 +359,49 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
 
             {activeTab === 'program' && (
               <div className="space-y-4">
-                {client.workout_program && client.workout_program.length > 0 ? (
-                  <>
-                    {client.program_name && (
-                      <Card>
-                        <h3 className="text-sm font-semibold text-[#D4A017] mb-2">
-                          {client.program_name}
-                        </h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
-                          <div className="bg-[#0a0a0a] rounded-lg p-2">
-                            <p className="text-xs text-[#555]">Calories</p>
-                            <p className="text-white font-bold text-sm">{client.target_calories ?? '—'}</p>
-                          </div>
-                          <div className="bg-[#0a0a0a] rounded-lg p-2">
-                            <p className="text-xs text-[#555]">Protein</p>
-                            <p className="text-white font-bold text-sm">{client.target_protein ? `${client.target_protein}g` : '—'}</p>
-                          </div>
-                          <div className="bg-[#0a0a0a] rounded-lg p-2">
-                            <p className="text-xs text-[#555]">Carbs</p>
-                            <p className="text-white font-bold text-sm">{client.target_carbs ? `${client.target_carbs}g` : '—'}</p>
-                          </div>
-                          <div className="bg-[#0a0a0a] rounded-lg p-2">
-                            <p className="text-xs text-[#555]">Fats</p>
-                            <p className="text-white font-bold text-sm">{client.target_fats ? `${client.target_fats}g` : '—'}</p>
-                          </div>
-                          <div className="bg-[#0a0a0a] rounded-lg p-2">
-                            <p className="text-xs text-[#555]">Water</p>
-                            <p className="text-white font-bold text-sm">{client.target_water_oz ? `${client.target_water_oz}oz` : '—'}</p>
-                          </div>
-                        </div>
-                      </Card>
-                    )}
-
-                    {/* Training Program */}
-                    <Card>
-                      <h3 className="text-sm font-semibold text-[#888] mb-4">Training Split</h3>
-                      <div className="space-y-3">
-                        {client.workout_program.map((day, i) => (
-                          <div key={i} className="bg-[#0a0a0a] rounded-lg p-3">
-                            <p className="text-sm text-[#FF6A00] font-medium mb-2">{day.day}</p>
-                            {day.exercises.map((ex, j) => (
-                              <p key={j} className="text-xs text-[#ccc] ml-3 mb-0.5">
-                                {ex.name} — <span className="text-[#888]">{ex.sets}x{ex.reps}</span>
-                              </p>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-
-                    {/* Cardio Protocol */}
-                    {client.cardio_protocol && client.cardio_protocol.length > 0 && (
-                      <Card>
-                        <h3 className="text-sm font-semibold text-[#888] mb-3">Cardio Protocol</h3>
-                        {client.cardio_protocol.map((phase, i) => (
-                          <div key={i} className="bg-[#0a0a0a] rounded-lg p-2 mb-1">
-                            <p className="text-xs text-white">
-                              <span className="text-[#FF6A00]">{phase.phase}:</span> {phase.duration}
-                            </p>
-                          </div>
-                        ))}
-                      </Card>
-                    )}
-
-                    {/* Meal Plan */}
-                    {client.meal_plan && client.meal_plan.length > 0 && (
-                      <Card>
-                        <h3 className="text-sm font-semibold text-[#888] mb-3">Meal Plan</h3>
-                        {client.meal_plan.map((meal, i) => (
-                          <div key={i} className="bg-[#0a0a0a] rounded-lg p-2 mb-1">
-                            <p className="text-xs">
-                              <span className="text-[#D4A017]">{meal.meal}:</span>{' '}
-                              <span className="text-[#ccc]">{meal.description}</span>
-                            </p>
-                          </div>
-                        ))}
-                      </Card>
-                    )}
-
-                    {/* Medical Protocol */}
-                    {client.medical_protocol && client.medical_protocol.length > 0 && (
-                      <Card>
-                        <h3 className="text-sm font-semibold text-[#888] mb-3">Medical Protocol</h3>
-                        {client.medical_protocol.map((m, i) => (
-                          <div key={i} className="bg-[#0a0a0a] rounded-lg p-2 mb-1">
-                            <p className="text-xs text-white font-medium">{m.name}</p>
-                            <p className="text-xs text-[#888]">{m.dose} — {m.frequency}</p>
-                            {m.notes && <p className="text-xs text-[#555]">{m.notes}</p>}
-                          </div>
-                        ))}
-                      </Card>
-                    )}
-
-                    <ProgramImport clientId={client.id} onImported={() => window.location.reload()} />
-                  </>
-                ) : (
-                  <ProgramImport clientId={client.id} onImported={() => window.location.reload()} />
-                )}
+                <ProgramEditor
+                  clientId={client.id}
+                  programName={client.program_name}
+                  targetCalories={client.target_calories}
+                  targetProtein={client.target_protein}
+                  targetCarbs={client.target_carbs}
+                  targetFats={client.target_fats}
+                  targetWaterOz={client.target_water_oz}
+                  targetSteps={client.target_steps}
+                  weigh_in_day={client.weigh_in_day}
+                  workoutProgram={client.workout_program}
+                  cardioProtocol={client.cardio_protocol}
+                  mealPlan={client.meal_plan}
+                  medicalProtocol={client.medical_protocol}
+                  currentSupplements={client.current_supplements as Array<{name: string; dose: string; frequency: string; [key: string]: string}>}
+                  currentPeds={client.current_peds as Array<{compound: string; dose: string; frequency: string; route: string; [key: string]: string}>}
+                  currentPeptides={client.current_peptides as Array<{name: string; dose: string; frequency: string; timing: string; [key: string]: string}>}
+                  onSaved={() => window.location.reload()}
+                />
+                <ProgramImport clientId={client.id} onImported={() => window.location.reload()} />
               </div>
             )}
 
             {activeTab === 'protocol' && (
-              <div className="space-y-4">
-                {/* Assigned supplements */}
-                <Card>
-                  <h3 className="text-sm font-semibold text-[#D4A017] mb-4">Supplements</h3>
-                  {client.current_supplements && client.current_supplements.length > 0 ? (
-                    <div className="space-y-2">
-                      {client.current_supplements.map((s, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-[#0a0a0a] rounded-lg">
-                          <div className="w-2 h-2 rounded-full bg-green-500" />
-                          <span className="text-white text-sm font-medium">{s.name}</span>
-                          <span className="text-[#888] text-xs">{s.dose}</span>
-                          <span className="text-[#555] text-xs ml-auto">{s.frequency}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-[#555]">No supplements assigned</p>
-                  )}
-                </Card>
-
-                {/* PEDs */}
-                <Card>
-                  <h3 className="text-sm font-semibold text-[#D4A017] mb-4">PED Protocol</h3>
-                  {client.current_peds && client.current_peds.length > 0 ? (
-                    <div className="space-y-2">
-                      {client.current_peds.map((p, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-[#0a0a0a] rounded-lg">
-                          <div className="w-2 h-2 rounded-full bg-[#FF6A00]" />
-                          <span className="text-white text-sm font-medium">{p.compound}</span>
-                          <span className="text-[#888] text-xs">{p.dose}</span>
-                          <span className="text-[#555] text-xs">{p.route}</span>
-                          <span className="text-[#555] text-xs ml-auto">{p.frequency}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-[#555]">No PEDs assigned</p>
-                  )}
-                </Card>
-
-                {/* Peptides */}
-                <Card>
-                  <h3 className="text-sm font-semibold text-[#D4A017] mb-4">Peptide Protocol</h3>
-                  {client.current_peptides && client.current_peptides.length > 0 ? (
-                    <div className="space-y-2">
-                      {client.current_peptides.map((p, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-[#0a0a0a] rounded-lg">
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          <span className="text-white text-sm font-medium">{p.name}</span>
-                          <span className="text-[#888] text-xs">{p.dose}</span>
-                          <span className="text-[#555] text-xs">{p.timing}</span>
-                          <span className="text-[#555] text-xs ml-auto">{p.frequency}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-[#555]">No peptides assigned</p>
-                  )}
-                </Card>
-              </div>
+              <ProgramEditor
+                clientId={client.id}
+                programName={client.program_name}
+                targetCalories={client.target_calories}
+                targetProtein={client.target_protein}
+                targetCarbs={client.target_carbs}
+                targetFats={client.target_fats}
+                targetWaterOz={client.target_water_oz}
+                targetSteps={client.target_steps}
+                weigh_in_day={client.weigh_in_day}
+                workoutProgram={client.workout_program}
+                cardioProtocol={client.cardio_protocol}
+                mealPlan={client.meal_plan}
+                medicalProtocol={client.medical_protocol}
+                currentSupplements={client.current_supplements as Array<{name: string; dose: string; frequency: string; [key: string]: string}>}
+                currentPeds={client.current_peds as Array<{compound: string; dose: string; frequency: string; route: string; [key: string]: string}>}
+                currentPeptides={client.current_peptides as Array<{name: string; dose: string; frequency: string; timing: string; [key: string]: string}>}
+                onSaved={() => window.location.reload()}
+              />
             )}
 
             {activeTab === 'trends' && <TrendCharts checkins={checkins} />}
