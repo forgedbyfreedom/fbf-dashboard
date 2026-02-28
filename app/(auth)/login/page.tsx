@@ -37,7 +37,7 @@ function LoginForm() {
       <img
         src="/logo.png"
         alt=""
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] max-w-[600px] opacity-[0.08] pointer-events-none select-none z-0"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] max-w-[600px] opacity-[0.15] pointer-events-none select-none z-0"
       />
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
