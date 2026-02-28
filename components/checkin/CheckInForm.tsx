@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button'
 import MoodSelector from '@/components/checkin/MoodSelector'
 import WaterTracker from '@/components/checkin/WaterTracker'
 import VoiceInput from '@/components/checkin/VoiceInput'
+import CompoundLogger from '@/components/checkin/CompoundLogger'
 
 interface SupplementItem {
   name: string
@@ -89,6 +90,8 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
     general_notes: '',
   })
 
+  const [compoundLog, setCompoundLog] = useState<Array<{ compound: string; dose: string; route: string }>>([])
+
   const update = (field: string, value: string | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }))
   }
@@ -125,8 +128,15 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
         payload[key] = val
         continue
       }
-      if (['supplements_json', 'ped_log_json'].includes(key)) {
+      if (key === 'supplements_json') {
         payload[key] = (val as string).split('\n').map(s => s.trim()).filter(Boolean)
+        continue
+      }
+      if (key === 'ped_log_json') {
+        // Combine structured compound log with any free-text notes
+        const textEntries = (val as string).split('\n').map(s => s.trim()).filter(Boolean)
+        const structuredEntries = compoundLog.map(e => `${e.compound} — ${e.dose} (${e.route})`)
+        payload[key] = [...structuredEntries, ...textEntries]
         continue
       }
       if (numFields.includes(key)) {
@@ -466,57 +476,6 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
               </div>
             )}
 
-            {/* Show medical protocol (GLP, PEDs, peptides) */}
-            {client.medical_protocol && client.medical_protocol.length > 0 && (
-              <div>
-                <label className="block text-sm text-[#D4A017] mb-3 font-semibold">Medical Protocol</label>
-                <div className="space-y-2">
-                  {client.medical_protocol.map((med, i) => (
-                    <div key={i} className="p-3 bg-[#141414] border border-[#2a2a2a] rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-[#FF6A00]" />
-                        <span className="text-white text-sm font-medium">{med.name}</span>
-                        <span className="text-[#888] text-xs">{med.dose}</span>
-                      </div>
-                      <p className="text-[#555] text-xs ml-5 mt-1">{med.frequency}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Show assigned PEDs */}
-            {client.current_peds && client.current_peds.length > 0 && (
-              <div>
-                <label className="block text-sm text-[#D4A017] mb-3 font-semibold">PED Protocol</label>
-                <div className="space-y-2">
-                  {client.current_peds.map((ped, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 bg-[#141414] border border-[#2a2a2a] rounded-xl">
-                      <div className="w-3 h-3 rounded-full bg-[#FF6A00]" />
-                      <span className="text-white text-sm">{ped.compound}</span>
-                      <span className="text-[#555] text-xs">{ped.dose} — {ped.frequency} ({ped.route})</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Show assigned peptides */}
-            {client.current_peptides && client.current_peptides.length > 0 && (
-              <div>
-                <label className="block text-sm text-[#D4A017] mb-3 font-semibold">Peptide Protocol</label>
-                <div className="space-y-2">
-                  {client.current_peptides.map((pep, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 bg-[#141414] border border-[#2a2a2a] rounded-xl">
-                      <div className="w-3 h-3 rounded-full bg-blue-500" />
-                      <span className="text-white text-sm">{pep.name}</span>
-                      <span className="text-[#555] text-xs">{pep.dose} — {pep.frequency} ({pep.timing})</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-sm text-[#888] mb-3">Did you take all supplements today?</label>
               <div className="flex gap-3">
@@ -531,24 +490,57 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
               </div>
             </div>
 
+            {/* Assigned supplement protocol (read-only reference) */}
+            {client.current_supplements && client.current_supplements.length > 0 && (
+              <div>
+                <label className="block text-sm text-[#D4A017] mb-2 font-semibold">Your Supplement Protocol</label>
+                <div className="space-y-1.5">
+                  {client.current_supplements.map((supp, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2.5 bg-[#141414] border border-[#2a2a2a] rounded-xl">
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                      <span className="text-white text-sm">{supp.name}</span>
+                      <span className="text-[#555] text-xs">{supp.dose} — {supp.frequency}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm text-[#888] mb-2">Supplement Notes (voice or type)</label>
-              <VoiceInput
+              <label className="block text-sm text-[#888] mb-2">Supplement Notes</label>
+              <textarea
                 value={form.supplements_json}
-                onChange={v => update('supplements_json', v)}
-                placeholder={"Creatine 5g, Fish Oil 3g, Vitamin D 5000iu..."}
+                onChange={e => update('supplements_json', e.target.value)}
+                className={`${inputClass} min-h-[60px] text-base`}
+                placeholder="Any supplement notes (missed doses, changes, etc.)..."
               />
             </div>
+
+            {/* Structured compound logger */}
             <div>
-              <label className="block text-sm text-[#888] mb-2">PED / Peptide Notes (voice or type)</label>
-              <VoiceInput
+              <label className="block text-sm text-[#D4A017] mb-2 font-semibold">PED / Peptide / Medical Log</label>
+              <p className="text-xs text-[#555] mb-3">Tap your compounds and enter the dose you took today</p>
+              <CompoundLogger
+                entries={compoundLog}
+                onChange={setCompoundLog}
+                assignedPeds={client.current_peds}
+                assignedPeptides={client.current_peptides}
+                assignedMedical={client.medical_protocol}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-[#888] mb-2">Additional PED/Peptide Notes</label>
+              <textarea
                 value={form.ped_log_json}
-                onChange={v => update('ped_log_json', v)}
-                placeholder={"Test Cyp 250mg pinned, Retatrutide 5mg injected..."}
+                onChange={e => update('ped_log_json', e.target.value)}
+                className={`${inputClass} min-h-[60px] text-base`}
+                placeholder="Any extra notes about your protocol today..."
               />
             </div>
+
             <div>
-              <label className="block text-sm text-[#888] mb-2">Side Effects (voice or type)</label>
+              <label className="block text-sm text-[#888] mb-2">Side Effects</label>
               <VoiceInput
                 value={form.side_effects_notes}
                 onChange={v => update('side_effects_notes', v)}
