@@ -42,8 +42,10 @@ function LoginForm() {
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Forged By Freedom" className="h-16 mx-auto mb-4" />
-          <p className="text-[#888] font-[family-name:var(--font-body)]">Coach Dashboard</p>
+          <img src="/logo.png" alt="Forged By Freedom" className="h-20 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white tracking-wide">FORGED BY FREEDOM</h1>
+          <p className="text-sm text-[#D4A017] font-medium tracking-widest uppercase">Strength & Nutrition</p>
+          <p className="text-[#888] text-sm mt-2">Coach Dashboard</p>
         </div>
 
         <form onSubmit={handleLogin} className="bg-[#141414] rounded-xl p-8 border border-[#2a2a2a]">

@@ -270,8 +270,10 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
       {/* Header */}
       <div className="relative z-10 px-4 pt-6 pb-4 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="Forged By Freedom" className="h-12 mx-auto mb-2" />
-        <p className="text-white text-sm mt-1">Daily Check-in — {client.first_name}</p>
+        <img src="/logo.png" alt="Forged By Freedom" className="h-16 mx-auto mb-3" />
+        <h1 className="text-xl font-bold text-white tracking-wide">FORGED BY FREEDOM</h1>
+        <p className="text-sm text-[#D4A017] font-medium tracking-widest uppercase">Strength & Nutrition</p>
+        <p className="text-white text-sm mt-3">Daily Check-in — {client.first_name}</p>
         <p className="text-[#555] text-xs mt-1">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>

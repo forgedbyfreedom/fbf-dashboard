@@ -30,13 +30,18 @@ export default function DashboardNav({ userName, orgName, role }: DashboardNavPr
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.png"
-              alt="Forged By Freedom"
-              className="h-10 cursor-pointer"
-              onClick={() => router.push('/')}
-            />
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="Forged By Freedom"
+                className="h-10"
+              />
+              <div className="hidden md:block">
+                <p className="text-sm font-bold text-white tracking-wide leading-tight">FORGED BY FREEDOM</p>
+                <p className="text-[10px] text-[#D4A017] tracking-widest uppercase leading-tight">Strength & Nutrition</p>
+              </div>
+            </div>
             <div className="flex gap-1">
               {links.map(link => (
                 <button
