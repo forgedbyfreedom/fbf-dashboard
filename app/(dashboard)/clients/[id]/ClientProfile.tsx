@@ -15,6 +15,7 @@ import ProgramEditor from '@/components/dashboard/ProgramEditor'
 import BodyCompChart from '@/components/dashboard/BodyCompChart'
 import ReportsList from '@/components/dashboard/ReportsList'
 import ClientScheduleTab from '@/components/dashboard/ClientScheduleTab'
+import SMSPanel from '@/components/dashboard/SMSPanel'
 import { ScheduledCheckin } from '@/types/scheduled-checkin'
 
 interface ProtocolItem {
@@ -45,6 +46,7 @@ interface ClientProfileProps {
     target_carbs?: number | null
     target_fats?: number | null
     target_water_oz?: number | null
+    sms_opt_in?: boolean
   }
   checkins: Array<{
     id: string
@@ -155,6 +157,7 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
     { id: 'timeline', label: 'Timeline' },
     { id: 'notes', label: 'Notes' },
     { id: 'schedule', label: 'Schedule' },
+    { id: 'sms', label: 'SMS' },
     { id: 'reports', label: 'Reports' },
     { id: 'settings', label: 'Settings' },
   ]
@@ -489,6 +492,15 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
 
             {activeTab === 'schedule' && (
               <ClientScheduleTab clientId={client.id} initialCheckins={scheduledCheckins} />
+            )}
+
+            {activeTab === 'sms' && (
+              <SMSPanel
+                clientId={client.id}
+                clientName={client.first_name}
+                clientPhone={client.phone}
+                smsOptIn={client.sms_opt_in ?? false}
+              />
             )}
 
             {activeTab === 'reports' && (
