@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendSMS, getTwilioPhoneNumber } from '@/lib/twilio'
+import { getTwilioPhoneNumber } from '@/lib/twilio'
 
 // Parse check-in data from free-form text
 // Supports: "Weight: 205, Sleep: 7, Mood: 8" or "w205 s7 m8" or mixed

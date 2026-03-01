@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -29,11 +29,7 @@ export default function SMSPanel({ clientId, clientName, clientPhone, smsOptIn }
   const [messages, setMessages] = useState<SMSMessage[]>([])
   const [loadingMessages, setLoadingMessages] = useState(true)
 
-  useEffect(() => {
-    fetchMessages()
-  }, [clientId])
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     setLoadingMessages(true)
     const res = await fetch(`/api/sms/history?client_id=${clientId}`)
     if (res.ok) {
@@ -41,7 +37,11 @@ export default function SMSPanel({ clientId, clientName, clientPhone, smsOptIn }
       setMessages(data.messages || [])
     }
     setLoadingMessages(false)
-  }
+  }, [clientId])
+
+  useEffect(() => {
+    fetchMessages()
+  }, [fetchMessages])
 
   const handleToggleOptIn = async () => {
     const newVal = !optIn
