@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
 import { computeFlags, saveFlags } from '@/lib/flags'
 import { updateClientMetrics } from '@/lib/metrics'
 import { triggerN8nWebhook } from '@/lib/n8n'
@@ -33,33 +34,71 @@ function estimateCaloriesBurned(description: string, durationMinutes?: number): 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { token, ...checkinData } = body
-
-    if (!token) {
-      return NextResponse.json({ error: 'Token required' }, { status: 400 })
-    }
-
-    // Validate token
-    const encoder = new TextEncoder()
-    const data = encoder.encode(token)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const tokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    const { token, client_id: bodyClientId, ...checkinData } = body
 
     const supabase = createAdminClient()
+    let clientId: string
+    let clientInfo: { id: string; organization_id: string; target_steps: number | null }
 
-    const { data: link, error: linkError } = await supabase
-      .from('client_links')
-      .select('client_id, clients(id, organization_id, target_steps)')
-      .eq('token_hash', tokenHash)
-      .eq('status', 'active')
-      .single()
+    if (token) {
+      // Token-based auth (magic link flow)
+      const encoder = new TextEncoder()
+      const data = encoder.encode(token)
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const tokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 
-    if (linkError || !link) {
-      return NextResponse.json({ error: 'Invalid or expired link' }, { status: 404 })
+      const { data: link, error: linkError } = await supabase
+        .from('client_links')
+        .select('client_id, clients(id, organization_id, target_steps)')
+        .eq('token_hash', tokenHash)
+        .eq('status', 'active')
+        .single()
+
+      if (linkError || !link) {
+        return NextResponse.json({ error: 'Invalid or expired link' }, { status: 404 })
+      }
+
+      clientId = link.client_id
+      clientInfo = link.clients as unknown as typeof clientInfo
+    } else if (bodyClientId) {
+      // Session-based auth (mobile app flow)
+      const authHeader = request.headers.get('authorization')
+      if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Token or authorization required' }, { status: 400 })
+      }
+
+      // Verify the Bearer token
+      const bearerToken = authHeader.replace('Bearer ', '')
+      const authClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      const { data: { user }, error: authError } = await authClient.auth.getUser(bearerToken)
+      if (!user || authError) {
+        return NextResponse.json({ error: 'Invalid authorization token' }, { status: 401 })
+      }
+
+      // Verify the user owns this client record
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id, organization_id, target_steps, user_id')
+        .eq('id', bodyClientId)
+        .single()
+
+      if (clientError || !client) {
+        return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+      }
+
+      if (client.user_id !== user.id) {
+        return NextResponse.json({ error: 'Not authorized for this client' }, { status: 403 })
+      }
+
+      clientId = client.id
+      clientInfo = { id: client.id, organization_id: client.organization_id, target_steps: client.target_steps }
+    } else {
+      return NextResponse.json({ error: 'Token or client_id required' }, { status: 400 })
     }
-
-    const clientId = link.client_id
     const today = new Date().toISOString().split('T')[0]
 
     // Auto-estimate calories burned from workout description
@@ -95,8 +134,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Compute flags and update metrics (don't block response)
-    const clientInfo = link.clients as unknown as { id: string; organization_id: string; target_steps: number | null }
-
     Promise.all([
       computeFlags(supabase, {
         client_id: clientId,

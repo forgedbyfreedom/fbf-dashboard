@@ -1,7 +1,33 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Origins allowed to call API routes (client app dev servers)
+const ALLOWED_ORIGINS = [
+  'http://localhost:8081',
+  'http://localhost:8082',
+  'http://localhost:8083',
+  'http://localhost:19006',
+]
+
+function setCorsHeaders(response: NextResponse, origin: string | null) {
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin)
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  }
+  return response
+}
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  const origin = request.headers.get('origin')
+
+  // Handle CORS preflight for API routes
+  if (request.method === 'OPTIONS' && pathname.startsWith('/api/')) {
+    const response = new NextResponse(null, { status: 204 })
+    return setCorsHeaders(response, origin)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -28,17 +54,17 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
-
   // Public routes that don't need auth
   if (
     pathname.startsWith('/checkin/') ||
     pathname.startsWith('/api/checkin') ||
     pathname.startsWith('/api/links/validate') ||
     pathname.startsWith('/api/webhooks/') ||
-    pathname.startsWith('/api/cron/')
+    pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/push/') ||
+    pathname.startsWith('/api/client/me')
   ) {
-    return supabaseResponse
+    return setCorsHeaders(supabaseResponse, origin)
   }
 
   // Auth routes: redirect to dashboard if already logged in

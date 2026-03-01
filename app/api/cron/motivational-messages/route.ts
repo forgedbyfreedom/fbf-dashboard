@@ -73,9 +73,51 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Also send push notifications to all clients with active push tokens
+  let pushSent = 0
+  try {
+    // Get all active clients (not just SMS-opted ones)
+    const { data: allClients } = await adminSupabase
+      .from('clients')
+      .select('id, first_name')
+      .eq('is_active', true)
+
+    if (allClients && allClients.length > 0) {
+      const { data: pushTokens } = await adminSupabase
+        .from('push_tokens')
+        .select('client_id, token')
+        .in('client_id', allClients.map(c => c.id))
+        .eq('is_active', true)
+
+      if (pushTokens && pushTokens.length > 0) {
+        const pushMessages = pushTokens.map(t => ({
+          to: t.token,
+          title: 'Forged by Freedom 🔥',
+          body: randomMessage.message,
+          data: { type: 'motivational' },
+          sound: 'default' as const,
+        }))
+
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(pushMessages),
+        })
+
+        pushSent = pushMessages.length
+      }
+    }
+  } catch (err) {
+    console.error('Push notification send error:', err)
+  }
+
   return NextResponse.json({
     message: `Motivational message sent: "${randomMessage.message}" (${randomMessage.category})`,
     sent: results.filter(r => r.status === 'sent').length,
+    pushSent,
     results,
   })
 }
