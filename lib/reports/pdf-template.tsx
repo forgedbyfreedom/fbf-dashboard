@@ -201,6 +201,28 @@ function pctColor(actual: number | null, target: number | null): string {
   return colors.red
 }
 
+function performanceColor(avg: number | null): string {
+  if (avg == null) return colors.textMuted
+  if (avg >= 8) return colors.green
+  if (avg >= 5) return colors.gold
+  return colors.red
+}
+
+function complianceColor(pct: number | null): string {
+  if (pct == null) return colors.textMuted
+  if (pct >= 80) return colors.green
+  if (pct >= 60) return colors.gold
+  return colors.red
+}
+
+function calorieVarianceColor(actual: number, target: number): string {
+  if (target === 0) return colors.textMuted
+  const pctDiff = Math.abs((actual - target) / target) * 100
+  if (pctDiff <= 10) return colors.green
+  if (pctDiff <= 20) return colors.gold
+  return colors.red
+}
+
 export function ReportPDF({ data }: { data: ReportData }) {
   const { metrics } = data
 
@@ -311,10 +333,53 @@ export function ReportPDF({ data }: { data: ReportData }) {
           </View>
 
           <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Performance Rating</Text>
+            <Text style={{ ...styles.metricValue, color: performanceColor(metrics.avgPerformance) }}>
+              {metrics.avgPerformance != null ? metrics.avgPerformance.toFixed(1) : '—'}/10
+            </Text>
+          </View>
+
+          <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Supplement Compliance</Text>
-            <Text style={styles.metricValue}>{metrics.supplementCompliance ?? '—'}%</Text>
+            <Text style={{ ...styles.metricValue, color: complianceColor(metrics.supplementCompliancePct) }}>
+              {metrics.supplementCompliancePct ?? '—'}%
+            </Text>
           </View>
         </View>
+
+        {/* Calories vs Target */}
+        {metrics.caloriesVsTarget.length > 0 && metrics.targetCalories && (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 10, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+              Calories vs Target
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 9, color: colors.textMuted }}>
+                Avg Intake: {metrics.avgCalories?.toFixed(0) || '—'} cal
+              </Text>
+              <Text style={{ fontSize: 9, color: colors.textMuted }}>
+                Target: {metrics.targetCalories} cal
+              </Text>
+            </View>
+            {(() => {
+              const avgActual = metrics.avgCalories || 0
+              const target = metrics.targetCalories as number
+              const variance = avgActual - target
+              const pctDiff = target > 0 ? Math.abs(variance / target) * 100 : 0
+              const varianceColor = calorieVarianceColor(avgActual, target)
+              return (
+                <View style={{ backgroundColor: colors.darkGray, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 9, color: colors.textMuted }}>Daily Variance</Text>
+                    <Text style={{ fontSize: 14, fontWeight: 'bold', color: varianceColor }}>
+                      {variance >= 0 ? '+' : ''}{variance.toFixed(0)} cal ({pctDiff.toFixed(0)}% {variance >= 0 ? 'over' : 'under'})
+                    </Text>
+                  </View>
+                </View>
+              )
+            })()}
+          </View>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Forged by Freedom</Text>
@@ -383,7 +448,56 @@ export function ReportPDF({ data }: { data: ReportData }) {
         </View>
       </Page>
 
-      {/* Page 4: Coach Message */}
+      {/* Page 4: Notes */}
+      {(data.clientNotes.length > 0 || data.coachNotes.length > 0) && (
+        <Page size="LETTER" style={styles.page}>
+          <Text style={styles.sectionHeader}>Notes</Text>
+
+          {data.clientNotes.length > 0 && (
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.gold, marginBottom: 10 }}>
+                Client Notes
+              </Text>
+              {data.clientNotes.map((n, i) => (
+                <View key={i} style={{ marginBottom: 8, paddingLeft: 8, borderLeft: `2px solid ${colors.border}` }}>
+                  <Text style={{ fontSize: 8, color: colors.textMuted, marginBottom: 2 }}>{n.date}</Text>
+                  <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.4 }}>{n.note}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {data.coachNotes.length > 0 && (
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.gold, marginBottom: 10 }}>
+                Coach Notes
+              </Text>
+              {data.coachNotes.map((n, i) => (
+                <View key={i} style={{ marginBottom: 10, paddingLeft: 8, borderLeft: `2px solid ${colors.orange}` }}>
+                  <Text style={{ fontSize: 8, color: colors.textMuted, marginBottom: 2 }}>{n.date}</Text>
+                  <Text style={{ fontSize: 9, color: colors.textLight, lineHeight: 1.4, marginBottom: 4 }}>{n.note}</Text>
+                  {n.action_items.length > 0 && (
+                    <View style={{ paddingLeft: 6 }}>
+                      {n.action_items.map((item, j) => (
+                        <Text key={j} style={{ fontSize: 8, color: colors.orange, marginBottom: 1 }}>
+                          {'• '}{item}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Forged by Freedom</Text>
+            <Text style={styles.footerText}>Page 4</Text>
+          </View>
+        </Page>
+      )}
+
+      {/* Page 5: Coach Message */}
       <Page size="LETTER" style={styles.page}>
         <View style={styles.messageContainer}>
           <Text style={styles.messageTitle}>A Message from Coach {data.coachName}</Text>
@@ -396,7 +510,7 @@ export function ReportPDF({ data }: { data: ReportData }) {
         </View>
         <View style={styles.footer}>
           <Text style={styles.footerText}>Forged by Freedom</Text>
-          <Text style={styles.footerText}>Page 4</Text>
+          <Text style={styles.footerText}>Page 5</Text>
         </View>
       </Page>
     </Document>

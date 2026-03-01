@@ -30,7 +30,7 @@ export default async function ClientPortalLayout({
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-lg font-bold text-[#FF6A00] tracking-wider">FBF</h1>
-            <a href="/portal/chat" className="text-sm text-[#888] hover:text-white transition-colors">Chat</a>
+            <a href="/portal/chat" className="text-sm text-[#888] hover:text-white transition-colors">Accountability Chat</a>
             <a
               href="https://forgedbyfreedom.org/ai-coach"
               target="_blank"

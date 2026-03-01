@@ -78,6 +78,7 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
     workout_notes: '',
     workout_description: '',
     rpe: '',
+    performance_rating: '',
     cardio_minutes: '',
     estimated_calories_burned: '',
     // Step 4: Sleep
@@ -210,8 +211,8 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
     const payload: Record<string, unknown> = { token }
     const numFields = [
       'weight_lbs', 'body_temp', 'sleep_hours', 'sleep_quality', 'steps',
-      'calories', 'protein_g', 'carbs_g', 'fat_g', 'rpe', 'cardio_minutes',
-      'mood_rating', 'stress_level', 'water_oz', 'estimated_calories_burned',
+      'calories', 'protein_g', 'carbs_g', 'fat_g', 'rpe', 'performance_rating',
+      'cardio_minutes', 'mood_rating', 'stress_level', 'water_oz', 'estimated_calories_burned',
     ]
 
     for (const [key, val] of Object.entries(form)) {
@@ -552,6 +553,17 @@ export default function CheckInForm({ client, token }: CheckInFormProps) {
                       <button key={n} type="button" onClick={() => update('rpe', String(n))}
                         className={`w-11 h-11 rounded-xl text-sm font-medium transition-colors ${
                           form.rpe === String(n) ? 'bg-[#FF6A00] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
+                        }`}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-[#888] mb-2">Rate Your Overall Performance Today</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                      <button key={n} type="button" onClick={() => update('performance_rating', String(n))}
+                        className={`w-11 h-11 rounded-xl text-sm font-medium transition-colors ${
+                          form.performance_rating === String(n) ? 'bg-[#D4A017] text-white' : 'bg-[#141414] text-[#888] border border-[#2a2a2a]'
                         }`}>{n}</button>
                     ))}
                   </div>

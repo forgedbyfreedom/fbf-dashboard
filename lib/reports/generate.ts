@@ -11,6 +11,9 @@ interface ReportMetrics {
   avgMood: number | null
   avgStress: number | null
   supplementCompliance: number | null
+  avgPerformance: number | null
+  supplementCompliancePct: number | null
+  caloriesVsTarget: { date: string; actual: number; target: number }[]
   targetCalories: number | null
   targetProtein: number | null
   targetSteps: number | null
@@ -35,6 +38,8 @@ export interface ReportData {
   metrics: ReportMetrics
   coachMessage: string
   programName: string | null
+  coachNotes: { date: string; note: string; action_items: string[] }[]
+  clientNotes: { date: string; note: string }[]
 }
 
 export async function generateReportData(
@@ -103,7 +108,9 @@ export async function generateReportData(
   const withMood = checkinsArr.filter(c => c.mood_rating != null)
   const withStress = checkinsArr.filter(c => c.stress_level != null)
   const withWeight = checkinsArr.filter(c => c.weight_lbs != null)
+  const withPerformance = checkinsArr.filter(c => c.performance_rating != null)
   const compliant = checkinsArr.filter(c => c.supplement_compliance === true)
+  const withSupplementData = checkinsArr.filter(c => c.supplement_compliance != null)
   const trainingDays = checkinsArr.filter(c => c.training_done).length
 
   const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null
@@ -120,6 +127,15 @@ export async function generateReportData(
     .limit(1)
     .single()
 
+  // Calories vs target daily data
+  const caloriesVsTarget = client.target_calories
+    ? withCalories.map(c => ({
+        date: c.date,
+        actual: c.calories,
+        target: client.target_calories as number,
+      }))
+    : []
+
   const metrics: ReportMetrics = {
     adherence: totalDays > 0 ? Math.round((checkinsArr.length / totalDays) * 100) : 0,
     avgCalories: avg(withCalories.map(c => c.calories)),
@@ -130,6 +146,9 @@ export async function generateReportData(
     avgMood: avg(withMood.map(c => c.mood_rating)),
     avgStress: avg(withStress.map(c => c.stress_level)),
     supplementCompliance: checkinsArr.length > 0 ? Math.round((compliant.length / checkinsArr.length) * 100) : null,
+    avgPerformance: avg(withPerformance.map(c => c.performance_rating)),
+    supplementCompliancePct: withSupplementData.length > 0 ? Math.round((compliant.length / withSupplementData.length) * 100) : null,
+    caloriesVsTarget,
     targetCalories: client.target_calories,
     targetProtein: client.target_protein,
     targetSteps: client.target_steps,
@@ -142,6 +161,31 @@ export async function generateReportData(
     bodyFatLatest: latestScan?.body_fat_pct || null,
     leanMassLatest: latestScan?.lean_mass_lbs || null,
   }
+
+  // Fetch coach notes for this client in date range (limit 5 most recent)
+  const { data: coachNotesRaw } = await adminSupabase
+    .from('coach_notes')
+    .select('note, action_items, created_at')
+    .eq('client_id', clientId)
+    .gte('created_at', startStr)
+    .lte('created_at', endStr + 'T23:59:59')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  const coachNotes = (coachNotesRaw || []).map(n => ({
+    date: new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    note: n.note,
+    action_items: Array.isArray(n.action_items) ? n.action_items as string[] : [],
+  }))
+
+  // Extract client notes from checkins (non-empty general_notes, limit 5)
+  const clientNotes = checkinsArr
+    .filter(c => c.general_notes && c.general_notes.trim())
+    .slice(-5)
+    .map(c => ({
+      date: new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      note: c.general_notes,
+    }))
 
   // Generate coach motivational message via AI
   const coachMessage = await generateCoachMessage(
@@ -164,6 +208,8 @@ export async function generateReportData(
     metrics,
     coachMessage,
     programName: client.program_name || null,
+    coachNotes,
+    clientNotes,
   }
 }
 

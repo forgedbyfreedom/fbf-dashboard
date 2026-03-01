@@ -20,7 +20,7 @@ export default function ChannelList({ channels, activeId, onSelect, onNewDM }: C
   return (
     <div className="w-full h-full flex flex-col">
       <div className="p-3 border-b border-[#2a2a2a]">
-        <h2 className="text-sm font-bold text-white tracking-wider">Chat</h2>
+        <h2 className="text-sm font-bold text-white tracking-wider">Accountability Chat</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto">
