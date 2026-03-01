@@ -5,6 +5,7 @@ import { ScheduledCheckin } from '@/types/scheduled-checkin'
 import CalendarGrid from './CalendarGrid'
 import CalendarDayDetail from './CalendarDayDetail'
 import ScheduleForm from './ScheduleForm'
+import Button from '@/components/ui/Button'
 
 interface GlobalCalendarProps {
   initialCheckins: ScheduledCheckin[]
@@ -78,6 +79,19 @@ export default function GlobalCalendar({ initialCheckins, clients }: GlobalCalen
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setShowForm(true)}>+ Schedule Check-in</Button>
+      </div>
+
+      {showForm && (
+        <ScheduleForm
+          clients={clients}
+          initialDate={selectedDate || undefined}
+          onSaved={handleSaved}
+          onCancel={() => setShowForm(false)}
+        />
+      )}
+
       <CalendarGrid
         checkins={checkins}
         currentMonth={currentMonth}
@@ -99,14 +113,6 @@ export default function GlobalCalendar({ initialCheckins, clients }: GlobalCalen
         />
       )}
 
-      {showForm && (
-        <ScheduleForm
-          clients={clients}
-          initialDate={selectedDate || undefined}
-          onSaved={handleSaved}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
     </div>
   )
 }

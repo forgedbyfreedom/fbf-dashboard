@@ -6,6 +6,7 @@ import CalendarGrid from './CalendarGrid'
 import CalendarDayDetail from './CalendarDayDetail'
 import ScheduleForm from './ScheduleForm'
 import Badge from '@/components/ui/Badge'
+import Button from '@/components/ui/Button'
 
 interface ClientScheduleTabProps {
   clientId: string
@@ -86,6 +87,19 @@ export default function ClientScheduleTab({ clientId, initialCheckins }: ClientS
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setShowForm(true)}>+ Schedule Check-in</Button>
+      </div>
+
+      {showForm && (
+        <ScheduleForm
+          clientId={clientId}
+          initialDate={selectedDate || undefined}
+          onSaved={handleSaved}
+          onCancel={() => setShowForm(false)}
+        />
+      )}
+
       <CalendarGrid
         checkins={checkins}
         currentMonth={currentMonth}
@@ -104,15 +118,6 @@ export default function ClientScheduleTab({ clientId, initialCheckins }: ClientS
           onDelete={handleDelete}
           onAddClick={() => setShowForm(true)}
           showClientNames={false}
-        />
-      )}
-
-      {showForm && (
-        <ScheduleForm
-          clientId={clientId}
-          initialDate={selectedDate || undefined}
-          onSaved={handleSaved}
-          onCancel={() => setShowForm(false)}
         />
       )}
 
