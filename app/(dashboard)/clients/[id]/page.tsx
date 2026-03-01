@@ -59,6 +59,20 @@ export default async function ClientPage({ params }: Props) {
     .eq('client_id', id)
     .single()
 
+  // Get scheduled checkins (current month)
+  const now = new Date()
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${lastDay}`
+
+  const { data: scheduledCheckins } = await supabase
+    .from('scheduled_checkins')
+    .select('*, clients(id, first_name, last_name)')
+    .eq('client_id', id)
+    .gte('scheduled_for', monthStart)
+    .lte('scheduled_for', monthEnd)
+    .order('scheduled_for', { ascending: true })
+
   return (
     <ClientProfile
       client={client}
@@ -67,6 +81,7 @@ export default async function ClientPage({ params }: Props) {
       notes={notes || []}
       links={links || []}
       metrics={metrics}
+      scheduledCheckins={scheduledCheckins || []}
     />
   )
 }

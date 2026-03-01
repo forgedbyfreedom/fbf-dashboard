@@ -14,6 +14,8 @@ import ProgramImport from '@/components/dashboard/ProgramImport'
 import ProgramEditor from '@/components/dashboard/ProgramEditor'
 import BodyCompChart from '@/components/dashboard/BodyCompChart'
 import ReportsList from '@/components/dashboard/ReportsList'
+import ClientScheduleTab from '@/components/dashboard/ClientScheduleTab'
+import { ScheduledCheckin } from '@/types/scheduled-checkin'
 
 interface ProtocolItem {
   [key: string]: string
@@ -110,9 +112,10 @@ interface ClientProfileProps {
     status: string
     open_flags_count: number
   } | null
+  scheduledCheckins: ScheduledCheckin[]
 }
 
-export default function ClientProfile({ client, checkins, flags, notes, links, metrics }: ClientProfileProps) {
+export default function ClientProfile({ client, checkins, flags, notes, links, metrics, scheduledCheckins }: ClientProfileProps) {
   const router = useRouter()
   const latest = checkins[0] || null
   const [generatedUrl, setGeneratedUrl] = useState('')
@@ -151,6 +154,7 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
     { id: 'trends', label: 'Trends' },
     { id: 'timeline', label: 'Timeline' },
     { id: 'notes', label: 'Notes' },
+    { id: 'schedule', label: 'Schedule' },
     { id: 'reports', label: 'Reports' },
     { id: 'settings', label: 'Settings' },
   ]
@@ -482,6 +486,10 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
             )}
 
             {activeTab === 'notes' && <CoachNotes clientId={client.id} initialNotes={notes} />}
+
+            {activeTab === 'schedule' && (
+              <ClientScheduleTab clientId={client.id} initialCheckins={scheduledCheckins} />
+            )}
 
             {activeTab === 'reports' && (
               <ReportsList clientId={client.id} />
