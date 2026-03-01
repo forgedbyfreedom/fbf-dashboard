@@ -66,6 +66,14 @@ export default function CalendarDayDetail({
                   }`} />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {c.scheduled_time && (
+                        <span className="text-sm font-medium text-[#FF6A00]">
+                          {new Date(`2000-01-01T${c.scheduled_time}`).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      )}
                       <Badge variant={typeBadgeVariant(c.type)}>{typeLabel(c.type)}</Badge>
                       {showClientNames && c.clients && (
                         <span className="text-sm text-white">

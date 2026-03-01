@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const { client_id, type, scheduled_for, notes, recurring } = body
+    const { client_id, type, scheduled_for, scheduled_time, notes, recurring } = body
 
     if (!client_id || !type || !scheduled_for) {
       return NextResponse.json({ error: 'client_id, type, and scheduled_for are required' }, { status: 400 })
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       coach_user_id: string
       type: string
       scheduled_for: string
+      scheduled_time: string | null
       notes: string | null
     }> = []
 
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
           coach_user_id: user.id,
           type,
           scheduled_for: date.toISOString().split('T')[0],
+          scheduled_time: scheduled_time || null,
           notes: notes || null,
         })
       }
@@ -95,6 +97,7 @@ export async function POST(request: NextRequest) {
         coach_user_id: user.id,
         type,
         scheduled_for,
+        scheduled_time: scheduled_time || null,
         notes: notes || null,
       })
     }

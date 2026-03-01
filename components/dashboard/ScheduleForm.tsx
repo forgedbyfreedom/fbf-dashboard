@@ -22,6 +22,7 @@ export default function ScheduleForm({
   const [selectedClientId, setSelectedClientId] = useState(clientId || '')
   const [type, setType] = useState<'weekly_email' | 'monthly_facetime'>('weekly_email')
   const [date, setDate] = useState(initialDate || new Date().toISOString().split('T')[0])
+  const [time, setTime] = useState('09:00')
   const [notes, setNotes] = useState('')
   const [recurring, setRecurring] = useState(false)
   const [recurringCount, setRecurringCount] = useState(4)
@@ -44,6 +45,7 @@ export default function ScheduleForm({
         client_id: targetClientId,
         type,
         scheduled_for: date,
+        scheduled_time: time || null,
         notes: notes || null,
       }
 
@@ -107,12 +109,20 @@ export default function ScheduleForm({
           </select>
         </div>
 
-        <Input
-          label="Date"
-          type="date"
-          value={date}
-          onChange={e => setDate(e.target.value)}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Date"
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+          />
+          <Input
+            label="Time"
+            type="time"
+            value={time}
+            onChange={e => setTime(e.target.value)}
+          />
+        </div>
 
         <div>
           <label className="block text-sm text-[#888] mb-1.5">Notes</label>

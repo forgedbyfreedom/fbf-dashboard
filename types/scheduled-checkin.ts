@@ -4,6 +4,7 @@ export interface ScheduledCheckin {
   coach_user_id: string
   type: 'weekly_email' | 'monthly_facetime'
   scheduled_for: string
+  scheduled_time: string | null
   completed_at: string | null
   notes: string | null
   created_at: string

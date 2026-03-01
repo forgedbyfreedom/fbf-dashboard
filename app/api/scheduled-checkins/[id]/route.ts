@@ -23,6 +23,9 @@ export async function PATCH(
     if ('notes' in body) {
       updates.notes = body.notes
     }
+    if ('scheduled_time' in body) {
+      updates.scheduled_time = body.scheduled_time
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })

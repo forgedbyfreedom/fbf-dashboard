@@ -164,11 +164,12 @@ export default function CalendarGrid({
                     return (
                       <div key={c.id} className="flex items-center gap-1">
                         <span className={`w-1.5 h-1.5 rounded-full ${dotColor} flex-shrink-0`} />
-                        {showClientNames && c.clients && (
-                          <span className="text-[10px] text-[#666] truncate leading-tight">
-                            {c.clients.first_name}
-                          </span>
-                        )}
+                        <span className="text-[10px] text-[#666] truncate leading-tight">
+                          {c.scheduled_time
+                            ? new Date(`2000-01-01T${c.scheduled_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                            : ''}
+                          {showClientNames && c.clients ? ` ${c.clients.first_name}` : ''}
+                        </span>
                       </div>
                     )
                   })}
