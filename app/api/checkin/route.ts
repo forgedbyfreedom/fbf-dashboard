@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { computeFlags, saveFlags } from '@/lib/flags'
 import { updateClientMetrics } from '@/lib/metrics'
 import { triggerN8nWebhook } from '@/lib/n8n'
+import { updateStreaks, evaluateBadges, sendBadgeNotifications } from '@/lib/gamification'
 
 function estimateCaloriesBurned(description: string, durationMinutes?: number): number {
   const text = description.toLowerCase()
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient()
     let clientId: string
-    let clientInfo: { id: string; organization_id: string; target_steps: number | null }
+    let clientInfo: { id: string; organization_id: string; target_steps: number | null; target_calories: number | null; target_protein: number | null }
 
     if (token) {
       // Token-based auth (magic link flow)
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
 
       const { data: link, error: linkError } = await supabase
         .from('client_links')
-        .select('client_id, clients(id, organization_id, target_steps)')
+        .select('client_id, clients(id, organization_id, target_steps, target_calories, target_protein)')
         .eq('token_hash', tokenHash)
         .eq('status', 'active')
         .single()
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       // Verify the user owns this client record
       const { data: client, error: clientError } = await supabase
         .from('clients')
-        .select('id, organization_id, target_steps, user_id')
+        .select('id, organization_id, target_steps, target_calories, target_protein, user_id')
         .eq('id', bodyClientId)
         .single()
 
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
       }
 
       clientId = client.id
-      clientInfo = { id: client.id, organization_id: client.organization_id, target_steps: client.target_steps }
+      clientInfo = { id: client.id, organization_id: client.organization_id, target_steps: client.target_steps, target_calories: client.target_calories, target_protein: client.target_protein }
     } else {
       return NextResponse.json({ error: 'Token or client_id required' }, { status: 400 })
     }
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save check-in' }, { status: 500 })
     }
 
-    // Compute flags and update metrics (don't block response)
+    // Compute flags, update metrics, and process gamification (don't block response)
     Promise.all([
       computeFlags(supabase, {
         client_id: clientId,
@@ -149,6 +150,14 @@ export async function POST(request: NextRequest) {
       }),
       updateClientMetrics(supabase, clientId),
       triggerN8nWebhook('checkin.created', { client_id: clientId, date: today, checkin_id: checkin.id }),
+      // Gamification: update streaks → evaluate badges → send notifications
+      updateStreaks(supabase, clientId).then(streakData =>
+        evaluateBadges(supabase, clientId, streakData, {
+          target_calories: clientInfo.target_calories,
+          target_protein: clientInfo.target_protein,
+          target_steps: clientInfo.target_steps,
+        }).then(newBadges => sendBadgeNotifications(supabase, clientId, newBadges))
+      ),
     ]).catch(err => console.error('Post-checkin processing error:', err))
 
     return NextResponse.json({ success: true, checkin_id: checkin.id })

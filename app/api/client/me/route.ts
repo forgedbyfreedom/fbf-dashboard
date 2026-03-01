@@ -71,6 +71,26 @@ export async function GET(request: NextRequest) {
       .limit(1)
       .single()
 
+    // Get streak data
+    const { data: streak } = await adminSupabase
+      .from('client_streaks')
+      .select('*')
+      .eq('client_id', client.id)
+      .single()
+
+    // Get earned badges with badge definitions
+    const { data: earnedBadges } = await adminSupabase
+      .from('client_badges')
+      .select('*, badge_definitions(*)')
+      .eq('client_id', client.id)
+      .order('earned_at', { ascending: false })
+
+    // Get all badge definitions (for the gallery)
+    const { data: allBadges } = await adminSupabase
+      .from('badge_definitions')
+      .select('*')
+      .order('sort_order')
+
     return NextResponse.json({
       client: {
         ...client,
@@ -78,6 +98,12 @@ export async function GET(request: NextRequest) {
       },
       metrics: metrics ?? null,
       recentCheckins: recentCheckins ?? [],
+      streak: streak ?? { current_streak: 0, best_streak: 0, total_checkins: 0 },
+      earnedBadges: (earnedBadges ?? []).map(eb => ({
+        ...eb.badge_definitions,
+        earned_at: eb.earned_at,
+      })),
+      allBadges: allBadges ?? [],
     })
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

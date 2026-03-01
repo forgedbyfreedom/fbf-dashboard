@@ -62,7 +62,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/api/push/') ||
-    pathname.startsWith('/api/client/me')
+    pathname.startsWith('/api/client/me') ||
+    pathname.startsWith('/api/client/leaderboard')
   ) {
     return setCorsHeaders(supabaseResponse, origin)
   }
