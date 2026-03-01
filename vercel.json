@@ -18,7 +18,7 @@
     },
     {
       "path": "/api/cron/instagram-posts",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 10 * * *"
     },
     {
       "path": "/api/cron/push-checkin-reminders",
