@@ -215,7 +215,7 @@ async function evaluateTargetBadge(
 
   const { data: checkins } = await supabase
     .from('checkins')
-    .select(`date, ${mapping.checkinField}`)
+    .select('*')
     .eq('client_id', clientId)
     .gte('date', startDate.toISOString().split('T')[0])
     .order('date', { ascending: false })
@@ -225,10 +225,10 @@ async function evaluateTargetBadge(
 
   // Check consecutive days where target was met
   let consecutive = 0
-  const sorted = [...checkins].sort((a, b) => b.date.localeCompare(a.date))
+  const sorted = [...checkins].sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.date as string).localeCompare(a.date as string))
 
   for (const c of sorted) {
-    const val = Number(c[mapping.checkinField as keyof typeof c])
+    const val = Number((c as Record<string, unknown>)[mapping.checkinField])
     if (val >= targetValue) {
       consecutive++
     } else {
@@ -251,7 +251,7 @@ async function evaluateLifestyleBadge(
 
   const { data: checkins } = await supabase
     .from('checkins')
-    .select(`date, ${metric}`)
+    .select('*')
     .eq('client_id', clientId)
     .gte('date', startDate.toISOString().split('T')[0])
     .order('date', { ascending: false })
@@ -259,11 +259,11 @@ async function evaluateLifestyleBadge(
 
   if (!checkins || checkins.length < requiredDays) return false
 
-  const sorted = [...checkins].sort((a, b) => b.date.localeCompare(a.date))
+  const sorted = [...checkins].sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.date as string).localeCompare(a.date as string))
 
   let consecutive = 0
   for (const c of sorted) {
-    const val = c[metric as keyof typeof c]
+    const val = (c as Record<string, unknown>)[metric]
 
     if (metric === 'training_done') {
       if (val === true) consecutive++
