@@ -32,15 +32,40 @@ export async function GET(request: NextRequest) {
 
     const adminSupabase = createAdminClient()
 
+    // Check org membership for role
+    const { data: membership } = await adminSupabase
+      .from('org_members')
+      .select('role, organization_id')
+      .eq('user_id', user.id)
+      .single()
+
+    const userRole = membership?.role ?? null
+    const organizationId = membership?.organization_id ?? null
+
     // Get client record for this user
-    const { data: client, error: clientError } = await adminSupabase
+    const { data: client } = await adminSupabase
       .from('clients')
       .select('*')
       .eq('user_id', user.id)
       .single()
 
-    if (clientError || !client) {
+    // If no client record and not an org member, 404
+    if (!client && !membership) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+    }
+
+    // If no client record (admin-only user), return minimal response
+    if (!client) {
+      return NextResponse.json({
+        client: null,
+        userRole,
+        organizationId,
+        metrics: null,
+        recentCheckins: [],
+        streak: { current_streak: 0, best_streak: 0, total_checkins: 0 },
+        earnedBadges: [],
+        allBadges: [],
+      })
     }
 
     // Get metrics
@@ -96,6 +121,8 @@ export async function GET(request: NextRequest) {
         ...client,
         last_weight: lastWeightCheckin?.weight_lbs ?? null,
       },
+      userRole,
+      organizationId,
       metrics: metrics ?? null,
       recentCheckins: recentCheckins ?? [],
       streak: streak ?? { current_streak: 0, best_streak: 0, total_checkins: 0 },
