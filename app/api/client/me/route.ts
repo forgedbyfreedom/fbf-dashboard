@@ -132,7 +132,8 @@ export async function GET(request: NextRequest) {
       })),
       allBadges: allBadges ?? [],
     })
-  } catch {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  } catch (err) {
+    console.error('[/api/client/me] Error:', err)
+    return NextResponse.json({ error: 'Server error', detail: String(err) }, { status: 500 })
   }
 }

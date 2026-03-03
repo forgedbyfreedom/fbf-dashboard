@@ -84,10 +84,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'First and last name required' }, { status: 400 })
     }
 
+    // If email provided, create a Supabase auth user with default password
+    let authUserId: string | null = null
+    if (email) {
+      const { data: authUser, error: authError } = await adminSupabase.auth.admin.createUser({
+        email,
+        password: 'Forged1',
+        email_confirm: true,
+        user_metadata: { full_name: `${first_name} ${last_name}` },
+      })
+      if (authError) {
+        // User may already exist — try to find them
+        const { data: { users } } = await adminSupabase.auth.admin.listUsers()
+        const existing = users?.find(u => u.email === email)
+        if (existing) {
+          authUserId = existing.id
+        }
+        // If user doesn't exist and creation failed, log but continue
+        // (client can still be created without an auth account)
+      } else {
+        authUserId = authUser.user.id
+      }
+    }
+
     const { data: client, error } = await adminSupabase
       .from('clients')
       .insert({
         organization_id: membership.organization_id,
+        user_id: authUserId,
         first_name,
         last_name,
         email: email || null,
