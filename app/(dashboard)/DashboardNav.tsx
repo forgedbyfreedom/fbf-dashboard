@@ -20,7 +20,6 @@ export default function DashboardNav({ userName, orgName, role, avatarUrl }: Das
     { href: '/instagram', label: 'Instagram' },
     { href: '/chat', label: 'Accountability Chat' },
     ...(role === 'org_admin' ? [
-      { href: '/scrub', label: 'Visitor Scrub' },
       { href: '/admin', label: 'Admin' },
     ] : []),
   ]
