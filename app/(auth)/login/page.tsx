@@ -87,7 +87,10 @@ function LoginForm() {
           </button>
         </form>
 
-        <p className="text-center text-[#333] text-xs mt-6">Forged By Freedom</p>
+        <p className="text-center text-[#555] text-xs mt-6">
+          Are you a client?{' '}
+          <a href="/portal" className="text-[#FF6A00] hover:underline">Go to Client Portal</a>
+        </p>
       </div>
     </div>
   )

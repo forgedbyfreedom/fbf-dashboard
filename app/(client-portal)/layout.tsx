@@ -10,7 +10,7 @@ export default async function ClientPortalLayout({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login')
+    redirect('/login?redirectTo=/portal')
   }
 
   // Check if this user is a client

@@ -19,7 +19,10 @@ export default function DashboardNav({ userName, orgName, role, avatarUrl }: Das
     { href: '/calendar', label: 'Calendar' },
     { href: '/instagram', label: 'Instagram' },
     { href: '/chat', label: 'Accountability Chat' },
-    ...(role === 'org_admin' ? [{ href: '/admin', label: 'Admin' }] : []),
+    ...(role === 'org_admin' ? [
+      { href: '/scrub', label: 'Visitor Scrub' },
+      { href: '/admin', label: 'Admin' },
+    ] : []),
   ]
 
   return (
@@ -60,6 +63,12 @@ export default function DashboardNav({ userName, orgName, role, avatarUrl }: Das
                 className="px-3 py-2 rounded-lg text-sm font-medium text-[#D4A017] hover:text-[#FF6A00] transition-colors"
               >
                 Bloodwork AI
+              </a>
+              <a
+                href="/portal"
+                className="px-3 py-2 rounded-lg text-sm font-medium bg-[#FF6A00]/10 text-[#FF6A00] hover:bg-[#FF6A00]/20 transition-colors"
+              >
+                Client Portal
               </a>
             </div>
           </div>
