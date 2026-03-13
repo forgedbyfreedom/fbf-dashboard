@@ -35,7 +35,7 @@ export default async function ClientPortalPage({
     .eq('user_id', user.id)
     .single()
 
-  // If coach with no client_id selected, show client list
+  // If coach with no client_id selected, show client list + self-enroll option
   if (isCoach && !ownClient) {
     const { data: clients } = await supabase
       .from('clients')
@@ -43,7 +43,7 @@ export default async function ClientPortalPage({
       .eq('is_active', true)
       .order('last_name')
 
-    return <ClientSelector clients={clients || []} />
+    return <ClientSelector clients={clients || []} showSelfEnroll />
   }
 
   // If coach who is also a client, show their own dashboard with client switcher
