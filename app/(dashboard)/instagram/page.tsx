@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import InstagramDashboard from '@/components/dashboard/InstagramDashboard'
 
+export const dynamic = 'force-dynamic'
+
 export default async function InstagramPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import GlobalCalendar from '@/components/dashboard/GlobalCalendar'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CalendarPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

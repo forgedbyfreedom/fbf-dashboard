@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import ClientTable from '@/components/dashboard/ClientTable'
 import AddClientButton from './AddClientButton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardHome() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
