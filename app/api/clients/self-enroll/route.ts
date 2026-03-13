@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST() {
   const supabase = await createClient()
@@ -8,6 +9,8 @@ export async function POST() {
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const adminSupabase = createAdminClient()
 
   // Must be a coach/admin
   const { data: membership } = await supabase
@@ -21,7 +24,7 @@ export async function POST() {
   }
 
   // Check if already has a client record
-  const { data: existing } = await supabase
+  const { data: existing } = await adminSupabase
     .from('clients')
     .select('id')
     .eq('user_id', user.id)
@@ -32,7 +35,7 @@ export async function POST() {
   }
 
   // Get profile info
-  const { data: profile } = await supabase
+  const { data: profile } = await adminSupabase
     .from('profiles')
     .select('full_name, email')
     .eq('id', user.id)
@@ -43,7 +46,7 @@ export async function POST() {
   const lastName = nameParts.slice(1).join(' ') || ''
 
   // Create client record
-  const { data: client, error } = await supabase
+  const { data: client, error } = await adminSupabase
     .from('clients')
     .insert({
       organization_id: membership.organization_id,
@@ -61,7 +64,7 @@ export async function POST() {
   }
 
   // Self-assign as coach
-  await supabase
+  await adminSupabase
     .from('client_coach_assignments')
     .insert({
       client_id: client.id,

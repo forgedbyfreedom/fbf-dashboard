@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import ClientDashboard from '@/components/portal/ClientDashboard'
 import ClientSelector from '@/components/portal/ClientSelector'
@@ -23,9 +24,12 @@ export default async function ClientPortalPage({
   const isCoach = !!membership
   const { client_id } = await searchParams
 
+  // Use admin client for coach queries (bypasses RLS)
+  const adminSupabase = isCoach ? createAdminClient() : null
+
   // If coach is viewing a specific client
-  if (isCoach && client_id) {
-    return await renderClientDashboard(supabase, client_id, true)
+  if (isCoach && client_id && adminSupabase) {
+    return await renderClientDashboard(adminSupabase, client_id, true)
   }
 
   // Check if user has their own client record
@@ -36,8 +40,8 @@ export default async function ClientPortalPage({
     .single()
 
   // If coach with no client_id selected, show client list + self-enroll option
-  if (isCoach && !ownClient) {
-    const { data: clients } = await supabase
+  if (isCoach && adminSupabase && !ownClient) {
+    const { data: clients } = await adminSupabase
       .from('clients')
       .select('id, first_name, last_name, email, is_active, last_weight')
       .eq('is_active', true)
@@ -47,14 +51,14 @@ export default async function ClientPortalPage({
   }
 
   // If coach who is also a client, show their own dashboard with client switcher
-  if (isCoach && ownClient) {
-    const { data: clients } = await supabase
+  if (isCoach && adminSupabase && ownClient) {
+    const { data: clients } = await adminSupabase
       .from('clients')
       .select('id, first_name, last_name, email, is_active, last_weight')
       .eq('is_active', true)
       .order('last_name')
 
-    const dashboard = await renderClientDashboard(supabase, ownClient.id, false)
+    const dashboard = await renderClientDashboard(adminSupabase, ownClient.id, false)
     return (
       <div>
         <ClientSelector clients={clients || []} currentClientId={ownClient.id} />
@@ -69,7 +73,7 @@ export default async function ClientPortalPage({
 }
 
 async function renderClientDashboard(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createAdminClient> | Awaited<ReturnType<typeof createClient>>,
   clientId: string,
   showBackLink: boolean
 ) {
