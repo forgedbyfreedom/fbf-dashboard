@@ -9,7 +9,7 @@ export async function GET() {
 
     const { data: clients, error } = await adminSupabase
       .from('clients')
-      .select('id, first_name, last_name, email, is_active, last_weight')
+      .select('id, first_name, last_name, email, is_active')
       .eq('is_active', true)
       .order('last_name')
 
