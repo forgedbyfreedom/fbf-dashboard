@@ -10,7 +10,6 @@ interface Client {
   last_name: string
   email: string
   is_active: boolean
-  last_weight?: number | null
 }
 
 interface ClientSelectorProps {
@@ -63,9 +62,17 @@ export default function ClientSelector({ clients, currentClientId, showSelfEnrol
         </Card>
       )}
 
-      <h2 className="text-xl font-bold text-white mb-4 mt-6">
-        {currentClientId ? 'Switch Client' : 'Select a Client'}
-      </h2>
+      <div className="flex items-center justify-between mt-6 mb-4">
+        <h2 className="text-xl font-bold text-white">
+          {currentClientId ? 'Switch Client' : 'Select a Client'}
+        </h2>
+        <a
+          href="/portal/add-client"
+          className="px-4 py-2 bg-[#FF6A00] text-white text-sm font-bold rounded-lg hover:bg-[#e85d00] transition-colors"
+        >
+          + Add Client
+        </a>
+      </div>
       <input
         type="text"
         placeholder="Search clients..."
@@ -75,27 +82,29 @@ export default function ClientSelector({ clients, currentClientId, showSelfEnrol
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filtered.map(client => (
-          <a
+          <div
             key={client.id}
-            href={`/portal?client_id=${client.id}`}
-            className={`block transition-all ${
+            className={`transition-all ${
               client.id === currentClientId ? 'ring-2 ring-[#FF6A00] rounded-xl' : ''
             }`}
           >
             <Card>
               <div className="flex items-center justify-between">
-                <div>
+                <a href={`/portal?client_id=${client.id}`} className="flex-1 min-w-0">
                   <p className="text-white font-semibold">
                     {client.first_name} {client.last_name}
                   </p>
-                  <p className="text-xs text-[#555]">{client.email}</p>
-                </div>
-                {client.last_weight && (
-                  <p className="text-sm text-[#888]">{client.last_weight} lbs</p>
-                )}
+                  <p className="text-xs text-[#555] truncate">{client.email}</p>
+                </a>
+                <a
+                  href={`/portal/client/${client.id}`}
+                  className="ml-3 px-3 py-1.5 text-xs font-semibold text-[#888] hover:text-[#FF6A00] bg-[#1a1a1a] rounded-lg border border-[#2a2a2a] hover:border-[#FF6A00]/30 transition-colors shrink-0"
+                >
+                  Edit
+                </a>
               </div>
             </Card>
-          </a>
+          </div>
         ))}
         {filtered.length === 0 && (
           <p className="text-sm text-[#555] col-span-full text-center py-8">No clients found.</p>
