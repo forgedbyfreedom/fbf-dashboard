@@ -8,7 +8,9 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') || '/'
@@ -17,8 +19,30 @@ function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     const supabase = createClient()
+
+    if (mode === 'signup') {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/confirm`,
+        },
+      })
+
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        return
+      }
+
+      setSuccess('Check your email for a confirmation link to complete signup.')
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
@@ -48,6 +72,31 @@ function LoginForm() {
         </div>
 
         <form onSubmit={handleLogin} className="bg-[#141414] rounded-xl p-8 border border-[#2a2a2a]">
+          <div className="flex gap-2 mb-6">
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); setSuccess('') }}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                mode === 'login'
+                  ? 'bg-[#FF6A00] text-white'
+                  : 'bg-[#1a1a1a] text-[#888] hover:text-white'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setError(''); setSuccess('') }}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                mode === 'signup'
+                  ? 'bg-[#FF6A00] text-white'
+                  : 'bg-[#1a1a1a] text-[#888] hover:text-white'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+
           <div className="mb-6">
             <label className="block text-sm text-[#888] mb-2">Email</label>
             <input
@@ -55,7 +104,7 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-[#555]"
-              placeholder='coach@forgedbyfreedom.com'
+              placeholder='you@email.com'
               required
             />
           </div>
@@ -69,6 +118,7 @@ function LoginForm() {
               className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-[#555]"
               placeholder="••••••••"
               required
+              minLength={6}
             />
           </div>
 
@@ -78,12 +128,21 @@ function LoginForm() {
             </div>
           )}
 
+          {success && (
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+              {success}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 bg-[#FF6A00] hover:bg-[#FF8533] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading
+              ? (mode === 'signup' ? 'Creating account...' : 'Signing in...')
+              : (mode === 'signup' ? 'Create Account' : 'Sign In')
+            }
           </button>
         </form>
 
