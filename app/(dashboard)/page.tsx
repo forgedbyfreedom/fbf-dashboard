@@ -20,7 +20,8 @@ export default async function DashboardHome() {
   // Get metrics for assigned clients (or all for admin)
   let query = supabase
     .from('client_metrics')
-    .select('*, clients(id, first_name, last_name)')
+    .select('*, clients!inner(id, first_name, last_name, is_active)')
+    .eq('clients.is_active', true)
     .order('status', { ascending: true })
 
   if (!isAdmin) {
