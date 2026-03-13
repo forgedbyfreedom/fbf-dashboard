@@ -105,13 +105,17 @@ export async function POST(request: NextRequest) {
       coach_user_id: user.id,
     })
 
-    // Create streak row
-    await adminSupabase.from('client_streaks').insert({
-      client_id: client.id,
-      current_streak: 0,
-      best_streak: 0,
-      total_checkins: 0,
-    }).catch(() => {}) // Ignore if table doesn't exist yet
+    // Create streak row (ignore error if table doesn't exist yet)
+    try {
+      await adminSupabase.from('client_streaks').insert({
+        client_id: client.id,
+        current_streak: 0,
+        best_streak: 0,
+        total_checkins: 0,
+      })
+    } catch {
+      // table may not exist
+    }
 
     return NextResponse.json({ message: 'Coach client record created', client })
   } catch (err) {
