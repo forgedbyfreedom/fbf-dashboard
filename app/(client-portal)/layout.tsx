@@ -13,16 +13,30 @@ export default async function ClientPortalLayout({
     redirect('/login?redirectTo=/portal')
   }
 
-  // Check if this user is a client
+  // Check if user is a coach/admin
+  const { data: membership } = await supabase
+    .from('org_members')
+    .select('role, organization_id')
+    .eq('user_id', user.id)
+    .single()
+
+  const isCoach = !!membership
+
+  // Check if this user is also a client
   const { data: client } = await supabase
     .from('clients')
     .select('first_name, last_name')
     .eq('user_id', user.id)
     .single()
 
-  if (!client) {
+  // If not a coach and not a client, redirect
+  if (!isCoach && !client) {
     redirect('/')
   }
+
+  const displayName = client
+    ? `${client.first_name} ${client.last_name}`
+    : user.email || 'User'
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden">
@@ -53,10 +67,15 @@ export default async function ClientPortalLayout({
                 >
                   AI Coach
                 </a>
+                {isCoach && (
+                  <a href="/" className="px-3 py-2 rounded-lg text-sm font-medium bg-[#FF6A00]/10 text-[#FF6A00] hover:bg-[#FF6A00]/20 transition-colors">
+                    Coach Dashboard
+                  </a>
+                )}
               </div>
             </div>
             <div className="text-sm text-white font-medium">
-              {client.first_name} {client.last_name}
+              {displayName}
             </div>
           </div>
         </nav>
