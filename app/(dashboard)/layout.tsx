@@ -21,6 +21,21 @@ export default async function DashboardLayout({
     .eq('user_id', user.id)
     .single()
 
+  // If not a coach/admin, check if they're a client and redirect to portal
+  if (!membership) {
+    const { data: client } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (client) {
+      redirect('/portal')
+    }
+    // Not a coach or client — redirect to login
+    redirect('/login')
+  }
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, email, avatar_url')
