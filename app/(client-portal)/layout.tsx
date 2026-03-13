@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 
 export default async function ClientPortalLayout({
   children,
@@ -68,9 +69,9 @@ export default async function ClientPortalLayout({
                   AI Coach
                 </a>
                 {isCoach && (
-                  <a href="/" className="px-3 py-2 rounded-lg text-sm font-medium bg-[#FF6A00]/10 text-[#FF6A00] hover:bg-[#FF6A00]/20 transition-colors">
+                  <Link href="/" className="px-3 py-2 rounded-lg text-sm font-medium bg-[#FF6A00]/10 text-[#FF6A00] hover:bg-[#FF6A00]/20 transition-colors">
                     Coach Dashboard
-                  </a>
+                  </Link>
                 )}
               </div>
             </div>
