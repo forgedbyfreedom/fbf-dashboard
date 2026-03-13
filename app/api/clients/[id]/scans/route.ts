@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
+
+async function getUserFromRequest(request: NextRequest) {
+  // Try Bearer token first (mobile app)
+  const authHeader = request.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    if (user && !error) return user
+  }
+
+  // Fall back to cookie-based auth (web dashboard)
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}
 
 export async function GET(
   request: NextRequest,
@@ -8,8 +28,7 @@ export async function GET(
 ) {
   try {
     const { id: clientId } = await params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -37,14 +56,17 @@ export async function POST(
 ) {
   try {
     const { id: clientId } = await params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    const { scan_date, scan_type, body_fat_pct, lean_mass_lbs, notes, file_url } = body
+    const {
+      scan_date, scan_type, body_fat_pct, lean_mass_lbs, fat_mass_lbs,
+      total_weight_lbs, skeletal_muscle_mass_lbs, basal_metabolic_rate,
+      visceral_fat_level, notes, file_url
+    } = body
 
     if (!scan_date || !scan_type) {
       return NextResponse.json({ error: 'scan_date and scan_type are required' }, { status: 400 })
@@ -57,8 +79,13 @@ export async function POST(
         client_id: clientId,
         scan_date,
         scan_type,
-        body_fat_pct: body_fat_pct ? parseFloat(body_fat_pct) : null,
-        lean_mass_lbs: lean_mass_lbs ? parseFloat(lean_mass_lbs) : null,
+        body_fat_pct: body_fat_pct != null ? parseFloat(body_fat_pct) : null,
+        lean_mass_lbs: lean_mass_lbs != null ? parseFloat(lean_mass_lbs) : null,
+        fat_mass_lbs: fat_mass_lbs != null ? parseFloat(fat_mass_lbs) : null,
+        total_weight_lbs: total_weight_lbs != null ? parseFloat(total_weight_lbs) : null,
+        skeletal_muscle_mass_lbs: skeletal_muscle_mass_lbs != null ? parseFloat(skeletal_muscle_mass_lbs) : null,
+        basal_metabolic_rate: basal_metabolic_rate != null ? parseInt(basal_metabolic_rate) : null,
+        visceral_fat_level: visceral_fat_level != null ? parseFloat(visceral_fat_level) : null,
         notes: notes || null,
         file_url: file_url || null,
       })
