@@ -120,7 +120,7 @@ export async function generateReportData(
 
   // Latest body comp scan
   const { data: latestScan } = await adminSupabase
-    .from('body_composition_scans')
+    .from('body_scans')
     .select('body_fat_pct, lean_mass_lbs')
     .eq('client_id', clientId)
     .order('scan_date', { ascending: false })
