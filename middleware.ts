@@ -63,6 +63,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/api/push/') ||
     pathname.startsWith('/api/client/me') ||
+    pathname.startsWith('/api/client/setup-coach') ||
     pathname.startsWith('/api/client/leaderboard') ||
     pathname.startsWith('/api/admin/')
   ) {
