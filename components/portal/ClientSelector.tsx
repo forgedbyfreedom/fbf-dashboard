@@ -10,7 +10,7 @@ interface Client {
   last_name: string
   email: string
   is_active: boolean
-  last_weight: number | null
+  last_weight?: number | null
 }
 
 interface ClientSelectorProps {
