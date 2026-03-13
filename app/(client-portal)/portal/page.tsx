@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import ClientDashboard from '@/components/portal/ClientDashboard'
 import ClientSelector from '@/components/portal/ClientSelector'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ClientPortalPage({
   searchParams,
 }: {
