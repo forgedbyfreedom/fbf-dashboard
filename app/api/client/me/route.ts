@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     const userRole = membership?.role ?? null
-    const organizationId = membership?.organization_id ?? null
+    let organizationId = membership?.organization_id ?? null
 
     // Get client record for this user
     const { data: client } = await adminSupabase
@@ -48,6 +48,11 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('user_id', user.id)
       .single()
+
+    // If client exists but no org membership, get org from client record
+    if (!organizationId && client?.organization_id) {
+      organizationId = client.organization_id
+    }
 
     // If no client record and not an org member, 404
     if (!client && !membership) {
