@@ -128,8 +128,8 @@ export default function ClientTable({ metrics }: { metrics: ClientMetric[] }) {
       </div>
 
       <div className="bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="overflow-x-auto -mx-0">
+          <table className="w-full min-w-[900px]">
             <thead>
               <tr className="border-b border-[#2a2a2a] text-left">
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => handleSort('name')}>

@@ -208,7 +208,7 @@ export default function ChatRoom() {
       {/* Mobile sidebar toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="md:hidden fixed bottom-20 left-4 z-50 w-10 h-10 bg-[#FF6A00] rounded-full flex items-center justify-center text-white shadow-lg"
+        className="md:hidden fixed bottom-24 left-4 z-50 w-12 h-12 bg-[#FF6A00] rounded-full flex items-center justify-center text-white shadow-lg"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

@@ -29,7 +29,7 @@ export default function Tabs({ tabs, defaultTab, onChange, children }: TabsProps
           <button
             key={tab.id}
             onClick={() => handleTabChange(tab.id)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+            className={`px-3 py-3 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
               activeTab === tab.id
                 ? 'text-[#FF6A00] border-[#FF6A00]'
                 : 'text-[#888] border-transparent hover:text-white'

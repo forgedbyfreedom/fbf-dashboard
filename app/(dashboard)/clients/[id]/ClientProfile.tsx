@@ -179,18 +179,18 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
           </div>
         </div>
         {metrics && (
-          <div className="hidden sm:flex gap-6 text-center">
+          <div className="flex flex-wrap gap-3 sm:gap-6 text-center">
             <div>
-              <p className="text-lg font-bold text-white">{metrics.adherence_7d ?? 0}%</p>
-              <p className="text-xs text-[#555]">Adherence</p>
+              <p className="text-base sm:text-lg font-bold text-white">{metrics.adherence_7d ?? 0}%</p>
+              <p className="text-[10px] sm:text-xs text-[#555]">Adherence</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-white">{metrics.weight_current ?? '—'}</p>
-              <p className="text-xs text-[#555]">Weight</p>
+              <p className="text-base sm:text-lg font-bold text-white">{metrics.weight_current ?? '—'}</p>
+              <p className="text-[10px] sm:text-xs text-[#555]">Weight</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-white">{metrics.open_flags_count}</p>
-              <p className="text-xs text-[#555]">Flags</p>
+              <p className="text-base sm:text-lg font-bold text-white">{metrics.open_flags_count}</p>
+              <p className="text-[10px] sm:text-xs text-[#555]">Flags</p>
             </div>
           </div>
         )}

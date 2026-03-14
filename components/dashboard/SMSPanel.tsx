@@ -170,10 +170,10 @@ export default function SMSPanel({ clientId, clientName, clientPhone, smsOptIn }
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Badge variant={typeBadge(m.message_type)}>{typeLabel(m.message_type)}</Badge>
-                  <span className="text-[10px] text-[#555]">
+                  <span className="text-[11px] sm:text-xs text-[#555]">
                     {m.direction === 'inbound' ? '← From client' : '→ To client'}
                   </span>
-                  <span className="text-[10px] text-[#555] ml-auto">
+                  <span className="text-[11px] sm:text-xs text-[#555] ml-auto">
                     {new Date(m.created_at).toLocaleString('en-US', {
                       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
                     })}
