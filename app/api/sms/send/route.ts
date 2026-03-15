@@ -36,8 +36,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client has no phone number' }, { status: 400 })
     }
 
-    // Send SMS
-    const result = await sendSMS({ to: client.phone, body: message })
+    // Send SMS with disclaimer footer
+    const disclaimerFooter = '\n\n—\nCoaching guidance only, not medical advice. Consult your physician for health concerns. Reply STOP to opt out.'
+    const result = await sendSMS({ to: client.phone, body: message + disclaimerFooter })
 
     // Log outbound message
     await adminSupabase.from('sms_messages').insert({

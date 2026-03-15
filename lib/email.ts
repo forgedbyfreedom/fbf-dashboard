@@ -85,6 +85,10 @@ export function buildReportEmail(clientName: string, coachName: string, reportTy
       <p>Forged by Freedom Coaching</p>
       <p>This report was auto-generated. Reply to your coach directly for questions.</p>
     </div>
+    <div style="border-top:1px solid #2a2a2a;padding:16px;margin-top:16px;text-align:center;">
+      <p style="font-size:10px;color:#666;line-height:1.6;">This report is for educational purposes only and does not constitute medical advice. All program recommendations are informational only. Consult a licensed physician before implementing changes. This document is confidential — do not share or distribute.</p>
+      <p style="font-size:10px;color:#FF6A00;margin-top:4px;">FORGED BY FREEDOM STRENGTH & NUTRITION</p>
+    </div>
   </div>
 </body>
 </html>`
