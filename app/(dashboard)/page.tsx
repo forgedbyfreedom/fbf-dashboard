@@ -49,6 +49,28 @@ export default async function DashboardHome() {
       </div>
 
       <ClientTable metrics={metrics || []} />
+
+      {/* Coach Credentials */}
+      <div className="mt-12 border-t border-[#2a2a2a] pt-8">
+        <p className="text-center text-[10px] text-[#555] uppercase tracking-[0.2em] font-semibold mb-4">Nationally Certified — NASM</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {[
+            { label: 'NASM-CPT', status: 'Active' },
+            { label: 'Nutrition Coach', status: 'Active' },
+            { label: 'Physique & Bodybuilding', status: 'Certified' },
+            { label: 'Nutrition (Level 4)', status: 'Certified' },
+            { label: 'Meal Prep Specialist', status: 'Certified' },
+          ].map((c) => (
+            <span
+              key={c.label}
+              className="inline-flex items-center gap-1.5 bg-[#141414] border border-[#2a2a2a] rounded-full px-3 py-1.5 text-[11px] text-[#888] font-medium"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${c.status === 'Active' ? 'bg-green-500' : 'bg-blue-500'}`} />
+              {c.label}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
