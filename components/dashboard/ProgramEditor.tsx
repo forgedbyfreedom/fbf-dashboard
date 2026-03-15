@@ -214,6 +214,11 @@ export default function ProgramEditor({
 
   return (
     <div className="space-y-4">
+      <div className="bg-[#FF6A00]/5 border border-[#FF6A00]/20 rounded-lg p-3 mb-4">
+        <p className="text-xs text-[#888] leading-relaxed text-center">
+          ⚠️ Medical protocols, compounds, and peptide information are for educational and research purposes only. These are not prescriptions or medical recommendations. Clients must consult a licensed physician.
+        </p>
+      </div>
       {/* ===== AI DOCUMENT IMPORT ===== */}
       <Card>
         <h3 className="text-sm font-semibold text-[#D4A017] mb-3">Import from Document</h3>

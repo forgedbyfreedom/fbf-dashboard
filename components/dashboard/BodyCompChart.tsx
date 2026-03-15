@@ -178,6 +178,12 @@ export default function BodyCompChart({ clientId }: BodyCompChartProps) {
 
           {/* Analysis display for selected scan */}
           {selectedScan && (
+            <>
+            <div className="bg-[#FF6A00]/5 border border-[#FF6A00]/20 rounded-lg p-3 mb-3">
+              <p className="text-xs text-[#888] leading-relaxed">
+                ⚠️ AI-generated analysis is informational only and may contain errors. Not a medical evaluation. Consult a qualified professional for interpretation.
+              </p>
+            </div>
             <ScanAnalysisDisplay
               clientId={clientId}
               scanId={selectedScan.id}
@@ -185,6 +191,7 @@ export default function BodyCompChart({ clientId }: BodyCompChartProps) {
               generatedAt={selectedScan.analysis_generated_at}
               onAnalysisGenerated={fetchScans}
             />
+            </>
           )}
         </>
       ) : (

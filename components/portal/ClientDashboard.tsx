@@ -466,6 +466,13 @@ export default function ClientDashboard({ client, checkins, metrics, streak, coa
                   </Card>
                 )}
 
+                {/* Disclaimer */}
+                <div className="bg-[#FF6A00]/5 border border-[#FF6A00]/20 rounded-lg p-3 mb-4">
+                  <p className="text-xs text-[#888] leading-relaxed text-center">
+                    ⚠️ Program information is for educational purposes only. Not medical advice. No recommendations for human consumption are made or implied. Consult your physician before implementing any protocol changes.
+                  </p>
+                </div>
+
                 {/* Supplements */}
                 {client.current_supplements && client.current_supplements.length > 0 && (
                   <Card>
