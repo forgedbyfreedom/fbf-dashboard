@@ -2,13 +2,29 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'FBF Coach Dashboard',
-  description: 'Forged by Freedom — Coaching Dashboard',
+  title: 'Coach Dashboard | Forged by Freedom',
+  description: 'Manage coaching clients with real-time metrics, check-ins, progress tracking, and AI-powered insights.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'FBF',
+  },
+  openGraph: {
+    title: 'Coach Dashboard | Forged by Freedom',
+    description: 'Manage coaching clients with real-time metrics and progress tracking.',
+    url: 'https://fbf-dashboard.vercel.app',
+    siteName: 'Forged by Freedom',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Coach Dashboard | Forged by Freedom',
+    description: 'Manage coaching clients with real-time metrics and progress tracking.',
+  },
+  robots: {
+    index: false,
+    follow: false,
   },
 }
 

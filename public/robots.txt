@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /api/
+Disallow: /portal
+Allow: /login
+
+Sitemap: https://fbf-dashboard.vercel.app/sitemap.xml
