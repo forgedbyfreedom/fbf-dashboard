@@ -54,6 +54,17 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Static PWA files — skip auth entirely
+  if (
+    pathname === '/manifest.json' ||
+    pathname === '/sw.js' ||
+    pathname === '/offline.html' ||
+    pathname === '/robots.txt' ||
+    pathname.startsWith('/icon-')
+  ) {
+    return supabaseResponse
+  }
+
   // Public routes that don't need auth
   if (
     pathname.startsWith('/checkin/') ||
