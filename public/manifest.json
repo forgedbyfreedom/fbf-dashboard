@@ -1,17 +1,40 @@
 {
-  "name": "Forged By Freedom",
+  "name": "Forged By Freedom — Coaching",
   "short_name": "FBF",
-  "description": "Forged by Freedom — Coaching Dashboard",
-  "start_url": "/",
+  "description": "Manage coaching clients with real-time metrics, check-ins, and AI-powered insights. Forged by Freedom Strength & Nutrition.",
+  "start_url": "/portal",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
+  "orientation": "any",
+  "categories": ["health", "fitness", "productivity"],
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "FBF Coach Dashboard"
     }
   ]
 }
