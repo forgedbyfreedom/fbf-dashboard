@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err)
       results.checks.push({ name, status: 'fail', error })
-      results.failures.push({ name, error })
+      results.failures.push({ name, status: 'fail', error })
       results.overall = 'degraded'
     }
   }
