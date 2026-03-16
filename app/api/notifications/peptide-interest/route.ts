@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email to both Bryan and Wendy
-    const emailSubject = `🧬 ${clientName} ${action === 'book_consult' ? 'wants a peptide consult' : `interested in ${peptide_name}`}`
+    const emailSubject = `FBF Alert: ${clientName} ${action === 'book_consult' ? 'wants a peptide consult' : `interested in ${peptide_name.replace(/[\n\r]/g, ' ').slice(0, 80)}`}`
     const emailHtml = buildEmailHtml(clientName, peptide_name, actionText, clientEmail, clientPhone)
 
     for (const contact of NOTIFY_CONTACTS) {
