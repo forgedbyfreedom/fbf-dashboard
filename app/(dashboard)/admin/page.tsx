@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AdminPanel from './AdminPanel'
+import UserManagement from './UserManagement'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +48,7 @@ export default async function AdminPage() {
         coaches={coaches || []}
         clients={clients || []}
       />
+      <UserManagement />
     </div>
   )
 }
