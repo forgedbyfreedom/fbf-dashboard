@@ -102,8 +102,13 @@ export async function PATCH(
 
     const body = await request.json()
     const allowedFields = [
+      'first_name', 'last_name', 'email', 'phone', 'timezone',
       'is_active', 'target_calories', 'target_protein', 'target_steps',
-      'target_carbs', 'target_fats', 'weigh_in_day',
+      'target_carbs', 'target_fats', 'target_water_oz', 'weigh_in_day',
+      'current_supplements', 'current_peds', 'current_peptides',
+      'program_name', 'program_raw_text', 'workout_program',
+      'cardio_protocol', 'meal_plan', 'medical_protocol',
+      'sms_opt_in', 'instagram_handle', 'leaderboard_opt_in',
     ]
 
     const updates: Record<string, unknown> = {}
