@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const AVAILABLE_TIMES = [
@@ -12,7 +12,7 @@ const AVAILABLE_TIMES = [
   { day: 'Friday', slots: ['9:00 AM', '10:00 AM', '11:00 AM'] },
 ]
 
-export default function BookConsultPage() {
+function BookConsultContent() {
   const searchParams = useSearchParams()
   const peptide = searchParams.get('peptide') || 'General Peptide Consultation'
   const clientName = searchParams.get('name') || ''
@@ -164,5 +164,17 @@ export default function BookConsultPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BookConsultPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#FF6A00', fontSize: 16, fontWeight: 600 }}>Loading...</div>
+      </div>
+    }>
+      <BookConsultContent />
+    </Suspense>
   )
 }

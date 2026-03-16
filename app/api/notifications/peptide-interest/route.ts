@@ -23,7 +23,7 @@ async function getUserFromRequest(request: NextRequest) {
   return null
 }
 
-function buildEmailHtml(clientName: string, peptideName: string, actionText: string, clientEmail: string, clientPhone: string) {
+function buildEmailHtml(clientName: string, peptide_name: string, actionText: string, clientEmail: string, clientPhone: string) {
   return `
 <!DOCTYPE html>
 <html>
@@ -46,7 +46,7 @@ function buildEmailHtml(clientName: string, peptideName: string, actionText: str
     <div class="card">
       <h1>🧬 Peptide Interest Alert</h1>
       <p><strong class="highlight">${clientName}</strong> ${actionText}:</p>
-      <p style="font-size: 20px; color: #FF6A00; font-weight: 800; margin: 16px 0;">${peptideName}</p>
+      <p style="font-size: 20px; color: #FF6A00; font-weight: 800; margin: 16px 0;">${peptide_name}</p>
       <p class="detail"><strong>Client:</strong> ${clientName}</p>
       <p class="detail"><strong>Email:</strong> ${clientEmail}</p>
       <p class="detail"><strong>Phone:</strong> ${clientPhone}</p>
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       ? 'wants to BOOK A PEPTIDE CONSULT about'
       : 'wants MORE INFORMATION on'
 
-    const smsBody = `🧬 FBF Peptide Alert\n\n${clientName} ${actionText}:\n→ ${peptideName}\n\nEmail: ${clientEmail}\nPhone: ${clientPhone}\n\nFollow up in the FBF app or call directly.`
+    const smsBody = `🧬 FBF Peptide Alert\n\n${clientName} ${actionText}:\n→ ${peptide_name}\n\nEmail: ${clientEmail}\nPhone: ${clientPhone}\n\nFollow up in the FBF app or call directly.`
 
     const results: string[] = []
 
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           try {
             await sendSMS({ to: contact.phone, body: smsBody })
             results.push(`SMS → ${contact.name}`)
-          } catch (err) {
+          } catch {
             results.push(`SMS failed → ${contact.name}`)
           }
         }
@@ -107,8 +107,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email to both Bryan and Wendy
-    const emailSubject = `🧬 ${clientName} ${action === 'book_consult' ? 'wants a peptide consult' : `interested in ${peptideName}`}`
-    const emailHtml = buildEmailHtml(clientName, peptideName, actionText, clientEmail, clientPhone)
+    const emailSubject = `🧬 ${clientName} ${action === 'book_consult' ? 'wants a peptide consult' : `interested in ${peptide_name}`}`
+    const emailHtml = buildEmailHtml(clientName, peptide_name, actionText, clientEmail, clientPhone)
 
     for (const contact of NOTIFY_CONTACTS) {
       if (contact.email) {
@@ -122,17 +122,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Log to database
-    await adminSupabase
-      .from('peptide_interests')
-      .insert({
-        client_id: client?.id || null,
-        user_id: user.id,
-        peptide_id,
-        peptide_name,
-        action: action || 'more_info',
-      })
-      .then(() => results.push('Logged to DB'))
-      .catch(() => results.push('DB log skipped'))
+    try {
+      await adminSupabase
+        .from('peptide_interests')
+        .insert({
+          client_id: client?.id || null,
+          user_id: user.id,
+          peptide_id,
+          peptide_name,
+          action: action || 'more_info',
+        })
+      results.push('Logged to DB')
+    } catch {
+      results.push('DB log skipped')
+    }
 
     return NextResponse.json({ success: true, notifications: results })
   } catch (err) {
