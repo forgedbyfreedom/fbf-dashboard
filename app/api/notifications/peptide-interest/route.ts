@@ -6,7 +6,7 @@ import { sendEmail } from '@/lib/email'
 
 const NOTIFY_CONTACTS = [
   { name: 'Bryan', phone: process.env.BRYAN_PHONE || '+17757418213', email: 'forgedbyfreedom@proton.me' },
-  { name: 'Wendy', phone: process.env.WENDY_PHONE || '+17757418209', email: process.env.WENDY_EMAIL || '' },
+  { name: 'Wendy', phone: process.env.WENDY_PHONE || '+17757418209', email: process.env.WENDY_EMAIL || 'wantonelli2@comcast.net' },
 ]
 
 async function getUserFromRequest(request: NextRequest) {
