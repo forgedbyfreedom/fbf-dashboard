@@ -1,6 +1,3 @@
-const SMTP_USER = process.env.SMTP_USER || 'forgedbyfreedom@gmail.com'
-const SMTP_PASS = process.env.SMTP_PASS || ''
-
 interface SendEmailOptions {
   to: string
   subject: string
@@ -13,53 +10,41 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailOptions) {
-  if (!SMTP_PASS) {
-    console.warn('SMTP_PASS not configured — skipping email send')
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.warn('RESEND_API_KEY not configured — skipping email send')
     return null
   }
 
-  // Use Resend as fallback if available, otherwise use Gmail SMTP via nodemailer
-  // Try Resend first (simpler for serverless)
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const { Resend } = await import('resend')
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
-      const { data, error } = await resend.emails.send({
-        from: fromEmail,
-        to,
-        subject,
-        html,
-      })
-      if (error) throw new Error(error.message)
-      return data
-    } catch (e) {
-      console.warn('Resend failed, falling back to SMTP:', e)
-    }
-  }
+  // On Resend free tier, we can only send to the account owner email
+  // Send to forgedbyfreedom@gmail.com with the intended recipient in the subject
+  // Gmail forwarding rules will route to Bryan and Wendy
+  const canSendTo = to.includes('forgedbyfreedom@gmail.com')
+  const actualTo = canSendTo ? to : 'forgedbyfreedom@gmail.com'
+  const actualSubject = canSendTo ? subject : `[→ ${to}] ${subject}`
 
-  // Gmail SMTP via nodemailer
-  try {
-    const nodemailer = await import('nodemailer')
-    const transporter = nodemailer.default.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    })
-
-    const result = await transporter.sendMail({
-      from: `"Forged by Freedom" <${SMTP_USER}>`,
-      to,
-      subject,
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'onboarding@resend.dev',
+      to: actualTo,
+      subject: actualSubject,
       html,
-    })
+    }),
+  })
 
-    return { id: result.messageId }
-  } catch (e) {
-    console.error('SMTP email failed:', e)
-    throw e
+  const data = await res.json()
+
+  if (!res.ok) {
+    console.error('Resend error:', data)
+    throw new Error(`Email failed: ${data.message || JSON.stringify(data)}`)
   }
+
+  return data
 }
 
 export function buildReportEmail(clientName: string, coachName: string, reportType: string, dateRange: string): string {
