@@ -21,7 +21,8 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
   // Gmail forwarding rules will route to Bryan and Wendy
   const canSendTo = to.includes('forgedbyfreedom@gmail.com')
   const actualTo = canSendTo ? to : 'forgedbyfreedom@gmail.com'
-  const actualSubject = canSendTo ? subject : `[→ ${to}] ${subject}`
+  const cleanSubject = subject.replace(/[\n\r]/g, ' ').trim()
+  const actualSubject = canSendTo ? cleanSubject : `[FWD ${to}] ${cleanSubject}`
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
