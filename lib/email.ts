@@ -1,11 +1,22 @@
-import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
 
-let _resend: Resend | null = null
-function getResend(): Resend {
-  if (!_resend) {
-    _resend = new Resend(process.env.RESEND_API_KEY)
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com'
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587')
+const SMTP_USER = process.env.SMTP_USER || 'forgedbyfreedom@gmail.com'
+const SMTP_PASS = process.env.SMTP_PASS || ''
+const FROM_EMAIL = process.env.SMTP_FROM || SMTP_USER
+
+let _transporter: nodemailer.Transporter | null = null
+function getTransporter(): nodemailer.Transporter {
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    })
   }
-  return _resend
+  return _transporter
 }
 
 interface SendEmailOptions {
@@ -20,30 +31,25 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, attachments }: SendEmailOptions) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn('RESEND_API_KEY not configured — skipping email send')
+  if (!SMTP_PASS) {
+    console.warn('SMTP_PASS not configured — skipping email send')
     return null
   }
 
-  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
-  const { data, error } = await getResend().emails.send({
-    from: fromEmail,
+  const transporter = getTransporter()
+  const result = await transporter.sendMail({
+    from: `"Forged by Freedom" <${FROM_EMAIL}>`,
     to,
     subject,
     html,
     attachments: attachments?.map(a => ({
       filename: a.filename,
       content: a.content,
-      content_type: a.contentType || 'application/pdf',
+      contentType: a.contentType || 'application/pdf',
     })),
   })
 
-  if (error) {
-    console.error('Resend error:', error)
-    throw new Error(`Email send failed: ${error.message}`)
-  }
-
-  return data
+  return { id: result.messageId }
 }
 
 export function buildReportEmail(clientName: string, coachName: string, reportType: string, dateRange: string): string {
