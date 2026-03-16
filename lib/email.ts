@@ -1,23 +1,5 @@
-import nodemailer from 'nodemailer'
-
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com'
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587')
 const SMTP_USER = process.env.SMTP_USER || 'forgedbyfreedom@gmail.com'
 const SMTP_PASS = process.env.SMTP_PASS || ''
-const FROM_EMAIL = process.env.SMTP_FROM || SMTP_USER
-
-let _transporter: nodemailer.Transporter | null = null
-function getTransporter(): nodemailer.Transporter {
-  if (!_transporter) {
-    _transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_PORT === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    })
-  }
-  return _transporter
-}
 
 interface SendEmailOptions {
   to: string
@@ -30,26 +12,54 @@ interface SendEmailOptions {
   }>
 }
 
-export async function sendEmail({ to, subject, html, attachments }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html }: SendEmailOptions) {
   if (!SMTP_PASS) {
     console.warn('SMTP_PASS not configured — skipping email send')
     return null
   }
 
-  const transporter = getTransporter()
-  const result = await transporter.sendMail({
-    from: `"Forged by Freedom" <${FROM_EMAIL}>`,
-    to,
-    subject,
-    html,
-    attachments: attachments?.map(a => ({
-      filename: a.filename,
-      content: a.content,
-      contentType: a.contentType || 'application/pdf',
-    })),
-  })
+  // Use Resend as fallback if available, otherwise use Gmail SMTP via nodemailer
+  // Try Resend first (simpler for serverless)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const { Resend } = await import('resend')
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+      const { data, error } = await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject,
+        html,
+      })
+      if (error) throw new Error(error.message)
+      return data
+    } catch (e) {
+      console.warn('Resend failed, falling back to SMTP:', e)
+    }
+  }
 
-  return { id: result.messageId }
+  // Gmail SMTP via nodemailer
+  try {
+    const nodemailer = await import('nodemailer')
+    const transporter = nodemailer.default.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    })
+
+    const result = await transporter.sendMail({
+      from: `"Forged by Freedom" <${SMTP_USER}>`,
+      to,
+      subject,
+      html,
+    })
+
+    return { id: result.messageId }
+  } catch (e) {
+    console.error('SMTP email failed:', e)
+    throw e
+  }
 }
 
 export function buildReportEmail(clientName: string, coachName: string, reportType: string, dateRange: string): string {
