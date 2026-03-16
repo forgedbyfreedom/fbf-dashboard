@@ -115,8 +115,9 @@ export async function POST(request: NextRequest) {
         try {
           await sendEmail({ to: contact.email, subject: emailSubject, html: emailHtml })
           results.push(`Email → ${contact.name}`)
-        } catch {
-          results.push(`Email failed → ${contact.name}`)
+        } catch (emailErr) {
+          const errMsg = emailErr instanceof Error ? emailErr.message : String(emailErr)
+          results.push(`Email failed → ${contact.name}: ${errMsg}`)
         }
       }
     }
