@@ -340,9 +340,12 @@ export default function UserManagement() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-white">User Management</h2>
         <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={() => openModal('mass_email')}>
-            Send Mass Email
-          </Button>
+          <button
+            onClick={() => openModal('mass_email')}
+            className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-[#FF6A00] hover:bg-[#FF8533] transition-colors shadow-lg shadow-[#FF6A00]/20"
+          >
+            📧 Send Mass Email
+          </button>
           <Button size="sm" onClick={() => openModal('create_user')}>
             + Add User
           </Button>
