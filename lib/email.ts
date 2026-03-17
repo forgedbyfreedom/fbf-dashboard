@@ -84,6 +84,14 @@ export function buildReportEmail(clientName: string, coachName: string, reportTy
       <p style="margin-bottom: 16px;">Need personalized guidance?</p>
       <a href="https://forgedbyfreedom.org/ai-coach" class="btn">Talk to AI Coach</a>
     </div>
+    <div class="card" style="text-align: center; background: #0f0f0f;">
+      <p style="color: #FF6A00; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">Access Your Portal</p>
+      <a href="https://fbf-dashboard.vercel.app/portal" style="display: inline-block; background: #FF6A00; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; margin-bottom: 16px;">Log In to FBF Portal</a>
+      <div style="margin-top: 16px;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https%3A%2F%2Ffbf-dashboard.vercel.app%2Fportal&bgcolor=0F0F0F&color=FF6A00&margin=0" alt="Scan to log in" width="120" height="120" style="border-radius: 8px;">
+        <p style="font-size: 11px; color: #666; margin-top: 8px;">Scan to open your portal</p>
+      </div>
+    </div>
     <div class="footer">
       <p>Forged by Freedom Coaching</p>
       <p>This report was auto-generated. Reply to your coach directly for questions.</p>
