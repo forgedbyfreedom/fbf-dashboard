@@ -212,20 +212,35 @@ export async function POST(request: NextRequest) {
       }
 
       case 'delete_user': {
-        // Delete related records first
-        const { data: client } = await adminSupabase.from('clients').select('id').eq('user_id', auth_id).single()
-        if (client) {
-          await adminSupabase.from('client_coach_assignments').delete().eq('client_id', client.id)
-          await adminSupabase.from('client_metrics').delete().eq('client_id', client.id)
-          await adminSupabase.from('client_streaks').delete().eq('client_id', client.id)
-          await adminSupabase.from('client_badges').delete().eq('client_id', client.id)
-          await adminSupabase.from('checkins').delete().eq('client_id', client.id)
-          await adminSupabase.from('flags').delete().eq('client_id', client.id)
-          await adminSupabase.from('chat_members').delete().eq('user_id', auth_id)
-          await adminSupabase.from('clients').delete().eq('id', client.id)
+        // Delete ALL related records first (order matters for foreign keys)
+        const { data: clientRecords } = await adminSupabase.from('clients').select('id').eq('user_id', auth_id)
+        const clientIds = (clientRecords || []).map(c => c.id)
+
+        for (const cid of clientIds) {
+          // Delete in dependency order
+          await adminSupabase.from('client_badges').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('client_streaks').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('client_metrics').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('client_coach_assignments').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('scheduled_checkins').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('coach_notes').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('client_reports').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('client_links').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('sms_messages').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('push_tokens').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('wearable_data').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('flags').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('checkins').delete().eq('client_id', cid).catch(() => {})
+          await adminSupabase.from('clients').delete().eq('id', cid).catch(() => {})
         }
-        await adminSupabase.from('org_members').delete().eq('user_id', auth_id)
-        // Delete auth user
+
+        // Also delete by user_id for tables that reference auth user directly
+        await adminSupabase.from('chat_members').delete().eq('user_id', auth_id).catch(() => {})
+        await adminSupabase.from('chat_messages').delete().eq('user_id', auth_id).catch(() => {})
+        await adminSupabase.from('org_members').delete().eq('user_id', auth_id).catch(() => {})
+        await adminSupabase.from('profiles').delete().eq('id', auth_id).catch(() => {})
+
+        // Finally delete auth user
         const { error } = await adminSupabase.auth.admin.deleteUser(auth_id)
         if (error) return NextResponse.json({ error: error.message }, { status: 400 })
         return NextResponse.json({ success: true })
