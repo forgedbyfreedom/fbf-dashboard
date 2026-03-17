@@ -29,42 +29,71 @@ const COMMON_PEPTIDES: PeptideReference[] = [
 /* ───────────────────────────────────────────
    Syringe Scale Visual
    ─────────────────────────────────────────── */
-function SyringeScale({ concentration }: { concentration: number }) {
-  const markings = [10, 15, 20, 24, 25, 30, 40, 50, 75, 100]
+function SyringeScale({ concentration, fillUnits = 0 }: { concentration: number; fillUnits?: number }) {
+  const markings = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+  const fillPct = Math.min(Math.max((fillUnits / 100) * 100, 0), 100)
+  const fillMg = (fillUnits / 100) * concentration
 
   return (
     <div className="mt-4">
       <h4 className="text-sm font-bold text-white mb-3">Syringe Scale</h4>
-      <div className="relative bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
-        <div className="relative mx-auto" style={{ maxWidth: 400 }}>
-          {/* Barrel */}
-          <div className="relative bg-gradient-to-b from-[#2a2a2a] to-[#1a1a1a] border border-[#3a3a3a] rounded-full h-8 mx-8">
-            {/* Plunger */}
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 w-6 h-4 bg-[#3a3a3a] border border-[#4a4a4a] rounded-l-sm" />
-            {/* Needle */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-8 w-8 h-0.5 bg-gray-400" />
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 w-0 h-0 border-l-[8px] border-l-gray-400 border-t-[2px] border-t-transparent border-b-[2px] border-b-transparent" />
+      <div className="relative bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
+        <div className="relative mx-auto" style={{ maxWidth: 420 }}>
+          <div className="relative mx-10">
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-10 w-10 h-3 bg-[#3a3a3a] border border-[#4a4a4a] rounded-l-md" />
+            <div className="relative h-10 bg-[#1e1e1e] border-2 border-[#444] rounded-full overflow-hidden">
+              {fillPct > 0 && (
+                <div
+                  className="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${fillPct}%`,
+                    background: 'linear-gradient(180deg, #FF8533 0%, #FF6A00 40%, #CC5500 100%)',
+                    boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.2), inset 0 -2px 4px rgba(0,0,0,0.3)',
+                  }}
+                />
+              )}
+              {fillPct > 0 && fillPct < 100 && (
+                <div className="absolute top-0 bottom-0 w-0.5 bg-white/60 z-10" style={{ left: `${fillPct}%` }} />
+              )}
+              {fillPct > 0 && (
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 z-20 px-2 py-0.5 rounded text-xs font-black"
+                  style={{
+                    left: `${Math.max(fillPct / 2, 8)}%`,
+                    transform: 'translate(-50%, -50%)',
+                    color: fillPct > 15 ? '#000' : '#FF6A00',
+                  }}
+                >
+                  {fillMg.toFixed(1)}mg ({fillUnits.toFixed(0)}u)
+                </div>
+              )}
+            </div>
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1">
+              <div className="w-10 h-0.5 bg-gradient-to-r from-gray-400 to-gray-300" />
+            </div>
           </div>
-          {/* Markings */}
-          <div className="relative mt-2 mx-8">
+          <div className="relative mt-1 mx-10">
             {markings.map((units) => {
               const pct = (units / 100) * 100
               const mg = (units / 100) * concentration
+              const isAtFill = Math.abs(units - fillUnits) < 3
               return (
-                <div
-                  key={units}
-                  className="absolute flex flex-col items-center"
-                  style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
-                >
-                  <div className="w-px h-3 bg-gray-500" />
-                  <span className="text-[9px] text-gray-400 mt-0.5 whitespace-nowrap">{units}u</span>
-                  <span className="text-[9px] text-[#FF6A00] font-bold whitespace-nowrap">{mg.toFixed(1)}mg</span>
+                <div key={units} className="absolute flex flex-col items-center" style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}>
+                  <div className={`w-px h-3 ${isAtFill ? 'bg-[#FF6A00]' : 'bg-gray-600'}`} />
+                  <span className={`text-[10px] mt-0.5 whitespace-nowrap font-semibold ${isAtFill ? 'text-[#FF6A00]' : 'text-gray-500'}`}>{units}</span>
+                  <span className={`text-[10px] whitespace-nowrap font-bold ${isAtFill ? 'text-white' : 'text-gray-600'}`}>{mg.toFixed(1)}mg</span>
                 </div>
               )
             })}
           </div>
         </div>
-        <div className="h-10" />
+        <div className="h-12" />
+        {fillUnits > 0 && (
+          <div className="text-center mt-2">
+            <span className="text-[#FF6A00] font-bold text-lg">{fillMg.toFixed(2)}mg</span>
+            <span className="text-gray-500 text-sm ml-2">= {fillUnits.toFixed(1)} units on syringe</span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -244,7 +273,7 @@ export default function PeptideCalculator() {
             </div>
           </div>
 
-          <SyringeScale concentration={concentration} />
+          <SyringeScale concentration={concentration} fillUnits={unitsToDraw} />
         </div>
 
         {/* Dosing Calculator */}
