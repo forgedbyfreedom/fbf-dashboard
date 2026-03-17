@@ -60,6 +60,7 @@ export default async function ClientPortalLayout({
               <div className="hidden sm:flex items-center gap-1">
                 <a href="/portal" className="px-3 py-2 rounded-lg text-sm font-medium text-[#888] hover:text-white transition-colors">Dashboard</a>
                 <a href="/portal/chat" className="px-3 py-2 rounded-lg text-sm font-medium text-[#888] hover:text-white transition-colors">Chat</a>
+                <a href="/portal/peptide-calculator" className="px-3 py-2 rounded-lg text-sm font-medium text-[#888] hover:text-white transition-colors">Peptide Calculator</a>
                 <a
                   href="https://forgedbyfreedom.org/ai-coach"
                   target="_blank"
@@ -81,6 +82,7 @@ export default async function ClientPortalLayout({
               <div className="flex sm:hidden items-center gap-1">
                 <a href="/portal" className="px-2 py-2 rounded-lg text-xs font-medium text-[#888] hover:text-white">Home</a>
                 <a href="/portal/chat" className="px-2 py-2 rounded-lg text-xs font-medium text-[#888] hover:text-white">Chat</a>
+                <a href="/portal/peptide-calculator" className="px-2 py-2 rounded-lg text-xs font-medium text-[#888] hover:text-white">Peptides</a>
                 <a href="https://forgedbyfreedom.org/ai-coach" target="_blank" rel="noopener noreferrer" className="px-2 py-2 rounded-lg text-xs font-medium text-[#D4A017]">AI</a>
               </div>
             </div>
