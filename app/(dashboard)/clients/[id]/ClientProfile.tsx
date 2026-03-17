@@ -16,6 +16,7 @@ import BodyCompChart from '@/components/dashboard/BodyCompChart'
 import ReportsList from '@/components/dashboard/ReportsList'
 import ClientScheduleTab from '@/components/dashboard/ClientScheduleTab'
 import SMSPanel from '@/components/dashboard/SMSPanel'
+import BloodworkUpload from '@/components/dashboard/BloodworkUpload'
 import { ScheduledCheckin } from '@/types/scheduled-checkin'
 
 interface ProtocolItem {
@@ -555,23 +556,7 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                   </div>
                 </Card>
 
-                <Card>
-                  <h3 className="text-sm font-semibold text-[#888] mb-4">Bloodwork Analyzer</h3>
-                  <p className="text-sm text-[#ccc] mb-3">
-                    Use the AI-powered bloodwork analyzer to review {client.first_name}&apos;s labs.
-                  </p>
-                  <a
-                    href="https://forgedbyfreedom.org/ai-coach"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#D4A017]/10 border border-[#D4A017]/30 rounded-lg text-sm text-[#D4A017] hover:bg-[#D4A017]/20 transition-colors"
-                  >
-                    Open Bloodwork AI
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                </Card>
+                <BloodworkUpload clientId={client.id} clientName={client.first_name} />
 
                 <Card>
                   <h3 className="text-sm font-semibold text-[#888] mb-4">Check-in Link</h3>
