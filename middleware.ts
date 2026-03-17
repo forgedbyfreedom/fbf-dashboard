@@ -78,7 +78,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/client/leaderboard') ||
     pathname.startsWith('/api/client/peptide-unlocks') ||
     pathname.startsWith('/api/admin/') ||
+    pathname.startsWith('/api/clients/') ||
     pathname.startsWith('/api/notifications/') ||
+    pathname.startsWith('/api/upload') ||
     pathname.startsWith('/book-consult')
   ) {
     return setCorsHeaders(supabaseResponse, origin)
