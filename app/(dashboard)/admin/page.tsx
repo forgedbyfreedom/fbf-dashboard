@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AdminPanel from './AdminPanel'
 import UserManagement from './UserManagement'
+import PeptideManagement from './PeptideManagement'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,7 @@ export default async function AdminPage() {
         clients={clients || []}
       />
       <UserManagement />
+      <PeptideManagement />
     </div>
   )
 }
