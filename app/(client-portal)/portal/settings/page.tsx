@@ -9,8 +9,8 @@ const supabase = createBrowserClient(
 )
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<any>(null)
-  const [client, setClient] = useState<any>(null)
+  const [user, setUser] = useState<{ email?: string } | null>(null)
+  const [client, setClient] = useState<{ first_name?: string; last_name?: string; timezone?: string; weigh_in_day?: string; id?: string } | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Oura
@@ -26,9 +26,6 @@ export default function SettingsPage() {
   const [showGarminPaste, setShowGarminPaste] = useState(false)
   const [garminData, setGarminData] = useState('')
   const [garminLoading, setGarminLoading] = useState(false)
-
-  // Push notifications
-  const [pushEnabled, setPushEnabled] = useState(true)
 
   // Password change
   const [newPassword, setNewPassword] = useState('')
@@ -104,7 +101,7 @@ export default function SettingsPage() {
     if (!garminData.trim()) return
     setGarminLoading(true)
     try {
-      let parsed: any
+      let parsed: unknown
       try { parsed = JSON.parse(garminData.trim()) } catch {
         alert('Invalid JSON. Please paste valid Garmin export data.')
         setGarminLoading(false)

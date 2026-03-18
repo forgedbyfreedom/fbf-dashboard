@@ -216,29 +216,23 @@ export async function POST(request: NextRequest) {
         const { data: clientRecords } = await adminSupabase.from('clients').select('id').eq('user_id', auth_id)
         const clientIds = (clientRecords || []).map(c => c.id)
 
+        const deleteTables = [
+          'client_badges', 'client_streaks', 'client_metrics', 'client_coach_assignments',
+          'scheduled_checkins', 'coach_notes', 'client_reports', 'client_links',
+          'sms_messages', 'push_tokens', 'wearable_data', 'flags', 'checkins',
+        ]
         for (const cid of clientIds) {
-          // Delete in dependency order
-          await adminSupabase.from('client_badges').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('client_streaks').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('client_metrics').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('client_coach_assignments').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('scheduled_checkins').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('coach_notes').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('client_reports').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('client_links').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('sms_messages').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('push_tokens').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('wearable_data').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('flags').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('checkins').delete().eq('client_id', cid).catch(() => {})
-          await adminSupabase.from('clients').delete().eq('id', cid).catch(() => {})
+          for (const table of deleteTables) {
+            try { await adminSupabase.from(table).delete().eq('client_id', cid) } catch { /* ignore */ }
+          }
+          try { await adminSupabase.from('clients').delete().eq('id', cid) } catch { /* ignore */ }
         }
 
         // Also delete by user_id for tables that reference auth user directly
-        await adminSupabase.from('chat_members').delete().eq('user_id', auth_id).catch(() => {})
-        await adminSupabase.from('chat_messages').delete().eq('user_id', auth_id).catch(() => {})
-        await adminSupabase.from('org_members').delete().eq('user_id', auth_id).catch(() => {})
-        await adminSupabase.from('profiles').delete().eq('id', auth_id).catch(() => {})
+        for (const table of ['chat_members', 'chat_messages', 'org_members']) {
+          try { await adminSupabase.from(table).delete().eq('user_id', auth_id) } catch { /* ignore */ }
+        }
+        try { await adminSupabase.from('profiles').delete().eq('id', auth_id) } catch { /* ignore */ }
 
         // Finally delete auth user
         const { error } = await adminSupabase.auth.admin.deleteUser(auth_id)
