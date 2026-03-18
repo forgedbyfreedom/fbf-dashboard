@@ -1,26 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@supabase/supabase-js'
-
-async function getUserFromRequest(request: NextRequest) {
-  // Try Bearer token first (mobile app)
-  const authHeader = request.headers.get('authorization')
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.replace('Bearer ', '')
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data: { user }, error } = await supabase.auth.getUser(token)
-    if (user && !error) return user
-  }
-
-  // Fall back to cookie-based auth (web dashboard)
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
-}
+import { getUserFromRequest, authorizeClientAccess } from '@/lib/auth-check'
 
 export async function GET(
   request: NextRequest,
@@ -31,6 +11,11 @@ export async function GET(
     const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const access = await authorizeClientAccess(user.id, clientId)
+    if (!access.authorized) {
+      return NextResponse.json({ error: access.reason }, { status: 403 })
     }
 
     const adminSupabase = createAdminClient()
@@ -60,6 +45,11 @@ export async function POST(
     const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const access = await authorizeClientAccess(user.id, clientId)
+    if (!access.authorized) {
+      return NextResponse.json({ error: access.reason }, { status: 403 })
     }
 
     const body = await request.json()

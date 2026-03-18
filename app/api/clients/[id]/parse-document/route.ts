@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getUserFromRequest, authorizeClientAccess } from '@/lib/auth-check'
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
@@ -176,12 +176,15 @@ export async function POST(
 ) {
   try {
     const { id: clientId } = await params
-    void clientId // used for auth context
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const access = await authorizeClientAccess(user.id, clientId)
+    if (!access.authorized) {
+      return NextResponse.json({ error: access.reason }, { status: 403 })
     }
 
     const body = await request.json()

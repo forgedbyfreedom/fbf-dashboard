@@ -62,9 +62,11 @@ export default function BloodworkUpload({ clientId, clientName }: BloodworkUploa
       if (res.ok) {
         const data = await res.json()
         setSavedResults(data.results || [])
+      } else {
+        setError('Failed to load previous bloodwork results.')
       }
     } catch {
-      // silently fail
+      setError('Failed to load previous bloodwork results.')
     } finally {
       setLoadingResults(false)
     }
