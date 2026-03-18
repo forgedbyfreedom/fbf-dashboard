@@ -96,7 +96,12 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Dashboard + admin + portal: require auth
+  // API routes handle their own auth (Bearer token or cookie) — don't redirect
+  if (pathname.startsWith('/api/')) {
+    return setCorsHeaders(supabaseResponse, origin)
+  }
+
+  // Dashboard + admin + portal pages: require auth (redirect to login if no session)
   if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
