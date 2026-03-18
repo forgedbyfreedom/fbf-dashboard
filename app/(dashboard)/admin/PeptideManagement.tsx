@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface PeptideSize {
   label: string
@@ -530,6 +530,389 @@ function PeptideCalculator() {
 }
 
 /* ───────────────────────────────────────────
+   Inventory Tracker
+   ─────────────────────────────────────────── */
+interface InventoryItem {
+  id: string
+  peptide_name: string
+  size_label: string
+  quantity_on_hand: number
+  reorder_threshold: number
+  wholesale_cost: number | null
+  retail_price: number | null
+  supplier: string | null
+  notes: string | null
+  low_stock: boolean
+  out_of_stock: boolean
+  assigned_to_clients: number
+}
+
+interface InventoryLog {
+  id: string
+  action: string
+  quantity: number
+  notes: string | null
+  created_at: string
+  clients?: { first_name: string; last_name: string } | null
+}
+
+interface InventorySummary {
+  total_items: number
+  low_stock: number
+  out_of_stock: number
+  total_value: number
+}
+
+function PeptideInventory() {
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [logs, setLogs] = useState<InventoryLog[]>([])
+  const [summary, setSummary] = useState<InventorySummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showAdd, setShowAdd] = useState(false)
+  const [showLog, setShowLog] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  // Add/edit form
+  const [formName, setFormName] = useState('')
+  const [formSize, setFormSize] = useState('')
+  const [formQty, setFormQty] = useState(0)
+  const [formThreshold, setFormThreshold] = useState(5)
+  const [formCost, setFormCost] = useState('')
+  const [formRetail, setFormRetail] = useState('')
+  const [formSupplier, setFormSupplier] = useState('')
+  const [formNotes, setFormNotes] = useState('')
+
+  // Transaction form
+  const [txAction, setTxAction] = useState<'received' | 'assigned' | 'expired' | 'adjustment'>('received')
+  const [txQty, setTxQty] = useState(1)
+  const [txNotes, setTxNotes] = useState('')
+
+  const fetchInventory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/peptide-inventory')
+      if (res.ok) {
+        const data = await res.json()
+        setInventory(data.inventory || [])
+        setLogs(data.recentLogs || [])
+        setSummary(data.summary || null)
+      }
+    } catch { /* ignore */ }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchInventory() }, [fetchInventory])
+
+  const handleAddItem = async () => {
+    if (!formName || !formSize) return
+    setSaving(true)
+    await fetch('/api/admin/peptide-inventory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'upsert_item',
+        peptide_name: formName.toUpperCase(),
+        size_label: formSize,
+        quantity_on_hand: formQty,
+        reorder_threshold: formThreshold,
+        wholesale_cost: formCost ? parseFloat(formCost) : null,
+        retail_price: formRetail ? parseFloat(formRetail) : null,
+        supplier: formSupplier || null,
+        notes: formNotes || null,
+      }),
+    })
+    setShowAdd(false)
+    setFormName(''); setFormSize(''); setFormQty(0); setFormThreshold(5)
+    setFormCost(''); setFormRetail(''); setFormSupplier(''); setFormNotes('')
+    setSaving(false)
+    fetchInventory()
+  }
+
+  const handleLogTransaction = async (inventoryId: string) => {
+    const qty = txAction === 'received' || txAction === 'adjustment' ? Math.abs(txQty) : -Math.abs(txQty)
+    setSaving(true)
+    await fetch('/api/admin/peptide-inventory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'log_transaction',
+        inventory_id: inventoryId,
+        transaction_action: txAction,
+        quantity: qty,
+        notes: txNotes || null,
+      }),
+    })
+    setShowLog(null)
+    setTxAction('received'); setTxQty(1); setTxNotes('')
+    setSaving(false)
+    fetchInventory()
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this inventory item?')) return
+    await fetch('/api/admin/peptide-inventory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete_item', id }),
+    })
+    fetchInventory()
+  }
+
+  const prefillFromCatalog = (name: string, size: string, price: number) => {
+    setFormName(name)
+    setFormSize(size)
+    setFormRetail(String(price))
+    setShowAdd(true)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin w-6 h-6 border-2 border-[#FF6A00] border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-10">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold text-white tracking-wide">Peptide Inventory</h2>
+        <button
+          onClick={() => setShowAdd(!showAdd)}
+          className="px-4 py-2 bg-[#FF6A00] text-white text-sm font-semibold rounded-lg hover:bg-[#e55f00] transition-colors"
+        >
+          + Add Item
+        </button>
+      </div>
+
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-4 text-center">
+            <p className="text-2xl font-bold text-white">{summary.total_items}</p>
+            <p className="text-xs text-[#888]">Total Items</p>
+          </div>
+          <div className={`bg-[#141414] border rounded-lg p-4 text-center ${summary.low_stock > 0 ? 'border-yellow-500/50' : 'border-[#2a2a2a]'}`}>
+            <p className={`text-2xl font-bold ${summary.low_stock > 0 ? 'text-yellow-400' : 'text-white'}`}>{summary.low_stock}</p>
+            <p className="text-xs text-[#888]">Low Stock</p>
+          </div>
+          <div className={`bg-[#141414] border rounded-lg p-4 text-center ${summary.out_of_stock > 0 ? 'border-red-500/50' : 'border-[#2a2a2a]'}`}>
+            <p className={`text-2xl font-bold ${summary.out_of_stock > 0 ? 'text-red-400' : 'text-white'}`}>{summary.out_of_stock}</p>
+            <p className="text-xs text-[#888]">Out of Stock</p>
+          </div>
+          <div className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-4 text-center">
+            <p className="text-2xl font-bold text-[#FF6A00]">${summary.total_value.toFixed(0)}</p>
+            <p className="text-xs text-[#888]">Inventory Value</p>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add from Catalog */}
+      {showAdd && (
+        <div className="bg-[#141414] border border-[#FF6A00]/30 rounded-lg p-5 mb-6">
+          <h3 className="text-white font-semibold mb-3">Add / Update Inventory Item</h3>
+
+          {/* Quick-fill buttons from catalog */}
+          <div className="mb-4">
+            <p className="text-xs text-[#888] mb-2">Quick fill from catalog:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PEPTIDES.map(p => p.sizes.map(s => (
+                <button
+                  key={`${p.name}-${s.label}`}
+                  onClick={() => prefillFromCatalog(p.name, s.label, s.price)}
+                  className="text-[10px] px-2 py-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded text-[#888] hover:text-white hover:border-[#FF6A00]/50 transition-colors"
+                >
+                  {p.name} {s.label}
+                </button>
+              )))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <input placeholder="Peptide Name" value={formName} onChange={e => setFormName(e.target.value)}
+              className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555] col-span-2" />
+            <input placeholder="Size (e.g. 10mg)" value={formSize} onChange={e => setFormSize(e.target.value)}
+              className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555]" />
+            <input placeholder="Qty on hand" type="number" value={formQty} onChange={e => setFormQty(parseInt(e.target.value) || 0)}
+              className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555]" />
+            <input placeholder="Reorder at" type="number" value={formThreshold} onChange={e => setFormThreshold(parseInt(e.target.value) || 2)}
+              className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555]" />
+            <input placeholder="Wholesale $" value={formCost} onChange={e => setFormCost(e.target.value)}
+              className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555]" />
+            <input placeholder="Retail $" value={formRetail} onChange={e => setFormRetail(e.target.value)}
+              className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555]" />
+            <input placeholder="Supplier" value={formSupplier} onChange={e => setFormSupplier(e.target.value)}
+              className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#555]" />
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button onClick={handleAddItem} disabled={saving}
+              className="px-5 py-2 bg-[#FF6A00] text-white text-sm font-semibold rounded-lg hover:bg-[#e55f00] disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button onClick={() => setShowAdd(false)}
+              className="px-5 py-2 border border-[#2a2a2a] text-[#888] text-sm rounded-lg hover:text-white">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Inventory Table */}
+      {inventory.length === 0 ? (
+        <div className="bg-[#141414] border border-[#2a2a2a] rounded-lg p-8 text-center">
+          <p className="text-[#888] text-sm">No inventory items yet. Add your first peptide above.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {inventory.map(item => {
+            const isLow = item.quantity_on_hand < 5
+            const isOut = item.quantity_on_hand === 0
+
+            return (
+              <div
+                key={item.id}
+                className={`bg-[#141414] border rounded-lg px-5 py-4 transition-all ${
+                  isOut
+                    ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                    : isLow
+                    ? 'border-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+                    : 'border-[#2a2a2a]'
+                }`}
+              >
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {/* Status dot */}
+                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                      isOut ? 'bg-red-500 animate-pulse' : isLow ? 'bg-red-400' : item.low_stock ? 'bg-yellow-400' : 'bg-green-400'
+                    }`} />
+                    <div>
+                      <h3 className="text-white font-bold text-sm">{item.peptide_name}</h3>
+                      <p className="text-[#888] text-xs">{item.size_label}{item.supplier ? ` — ${item.supplier}` : ''}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    {/* Quantity */}
+                    <div className="text-center">
+                      <p className={`text-xl font-bold ${isOut ? 'text-red-400' : isLow ? 'text-red-300' : 'text-white'}`}>
+                        {item.quantity_on_hand}
+                      </p>
+                      <p className="text-[10px] text-[#666]">vials</p>
+                    </div>
+
+                    {/* Assigned to clients */}
+                    <div className="text-center">
+                      <p className="text-lg font-semibold text-[#888]">{item.assigned_to_clients}</p>
+                      <p className="text-[10px] text-[#666]">clients</p>
+                    </div>
+
+                    {/* Cost/Retail */}
+                    {item.wholesale_cost && (
+                      <div className="text-center hidden sm:block">
+                        <p className="text-sm text-[#888]">${item.wholesale_cost}</p>
+                        <p className="text-[10px] text-[#666]">cost</p>
+                      </div>
+                    )}
+                    {item.retail_price && (
+                      <div className="text-center hidden sm:block">
+                        <p className="text-sm text-[#FF6A00] font-semibold">${item.retail_price}</p>
+                        <p className="text-[10px] text-[#666]">retail</p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => setShowLog(showLog === item.id ? null : item.id)}
+                        className="px-3 py-1.5 text-xs bg-[#1a1a1a] border border-[#2a2a2a] rounded text-[#888] hover:text-white hover:border-[#FF6A00]/50"
+                      >
+                        +/-
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="px-2 py-1.5 text-xs text-red-400/50 hover:text-red-400"
+                      >
+                        X
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transaction form */}
+                {showLog === item.id && (
+                  <div className="mt-3 pt-3 border-t border-[#2a2a2a]">
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div>
+                        <p className="text-[10px] text-[#666] mb-1">Type</p>
+                        <select
+                          value={txAction}
+                          onChange={e => setTxAction(e.target.value as typeof txAction)}
+                          className="bg-[#0a0a0a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white"
+                        >
+                          <option value="received">Received (add)</option>
+                          <option value="assigned">Assigned to client (remove)</option>
+                          <option value="expired">Expired (remove)</option>
+                          <option value="adjustment">Adjustment</option>
+                        </select>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[#666] mb-1">Qty</p>
+                        <input type="number" value={txQty} onChange={e => setTxQty(parseInt(e.target.value) || 0)} min={1}
+                          className="bg-[#0a0a0a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white w-20" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-[#666] mb-1">Notes</p>
+                        <input value={txNotes} onChange={e => setTxNotes(e.target.value)} placeholder="Optional note..."
+                          className="bg-[#0a0a0a] border border-[#2a2a2a] rounded px-3 py-1.5 text-sm text-white w-full placeholder-[#555]" />
+                      </div>
+                      <button
+                        onClick={() => handleLogTransaction(item.id)}
+                        disabled={saving}
+                        className="px-4 py-1.5 bg-[#FF6A00] text-white text-sm font-semibold rounded hover:bg-[#e55f00] disabled:opacity-50"
+                      >
+                        Log
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Recent Activity Log */}
+      {logs.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-[#888] mb-3">Recent Activity</h3>
+          <div className="bg-[#141414] border border-[#2a2a2a] rounded-lg divide-y divide-[#2a2a2a] max-h-60 overflow-y-auto">
+            {logs.slice(0, 20).map(log => (
+              <div key={log.id} className="px-4 py-2.5 flex items-center justify-between text-sm">
+                <div className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full ${
+                    log.action === 'received' ? 'bg-green-400' :
+                    log.action === 'assigned' ? 'bg-blue-400' :
+                    log.action === 'expired' ? 'bg-red-400' : 'bg-yellow-400'
+                  }`} />
+                  <span className="text-white capitalize">{log.action}</span>
+                  <span className={`font-semibold ${log.quantity > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {log.quantity > 0 ? '+' : ''}{log.quantity}
+                  </span>
+                  {log.clients && (
+                    <span className="text-[#888]">→ {log.clients.first_name} {log.clients.last_name}</span>
+                  )}
+                  {log.notes && <span className="text-[#666] text-xs">({log.notes})</span>}
+                </div>
+                <span className="text-[#555] text-xs">{new Date(log.created_at).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ───────────────────────────────────────────
    Main Component
    ─────────────────────────────────────────── */
 export default function PeptideManagement() {
@@ -570,6 +953,9 @@ export default function PeptideManagement() {
 
       {/* Peptide Calculator Section */}
       <PeptideCalculator />
+
+      {/* Inventory Tracker */}
+      <PeptideInventory />
 
       <h2 className="text-2xl font-bold text-white mb-6 tracking-wide">Peptide Catalog</h2>
 
