@@ -586,6 +586,7 @@ function PeptideInventory() {
   const [txAction, setTxAction] = useState<'received' | 'assigned' | 'expired' | 'adjustment'>('received')
   const [txQty, setTxQty] = useState(1)
   const [txNotes, setTxNotes] = useState('')
+  const [error, setError] = useState('')
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -595,8 +596,14 @@ function PeptideInventory() {
         setInventory(data.inventory || [])
         setLogs(data.recentLogs || [])
         setSummary(data.summary || null)
+        setError('')
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(`Failed to load inventory: ${data.error || res.status}`)
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      setError(`Network error loading inventory: ${err}`)
+    }
     finally { setLoading(false) }
   }, [])
 
@@ -605,7 +612,8 @@ function PeptideInventory() {
   const handleAddItem = async () => {
     if (!formName || !formSize) return
     setSaving(true)
-    await fetch('/api/admin/peptide-inventory', {
+    setError('')
+    const res = await fetch('/api/admin/peptide-inventory', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -620,6 +628,12 @@ function PeptideInventory() {
         notes: formNotes || null,
       }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(`Save failed: ${data.error || res.status}`)
+      setSaving(false)
+      return
+    }
     setShowAdd(false)
     setFormName(''); setFormSize(''); setFormQty(0); setFormThreshold(5)
     setFormCost(''); setFormRetail(''); setFormSupplier(''); setFormNotes('')
@@ -683,6 +697,12 @@ function PeptideInventory() {
           + Add Item
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-900/30 border border-red-500/30 rounded-lg px-4 py-3 mb-4">
+          <p className="text-red-300 text-sm">{error}</p>
+        </div>
+      )}
 
       {/* Summary Cards */}
       {summary && (

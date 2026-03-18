@@ -2,20 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-async function verifyAdmin(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+async function verifyAdmin(_request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError) console.error('Peptide inventory auth error:', authError)
+    if (!user) return null
 
-  const adminSupabase = createAdminClient()
-  const { data: membership } = await adminSupabase
-    .from('org_members')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
+    const adminSupabase = createAdminClient()
+    const { data: membership, error: memberError } = await adminSupabase
+      .from('org_members')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
 
-  if (!membership || (membership.role !== 'org_admin' && membership.role !== 'coach')) return null
-  return user
+    if (memberError) console.error('Peptide inventory membership error:', memberError)
+    if (!membership || (membership.role !== 'org_admin' && membership.role !== 'coach')) return null
+    return user
+  } catch (err) {
+    console.error('Peptide inventory verifyAdmin error:', err)
+    return null
+  }
 }
 
 // GET — List all inventory with low-stock alerts
