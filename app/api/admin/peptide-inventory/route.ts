@@ -2,53 +2,41 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-async function verifyAdmin(_request: NextRequest) {
+async function verifyAdmin() {
   try {
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError) console.error('Peptide inventory auth error:', authError)
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
     const adminSupabase = createAdminClient()
-    const { data: membership, error: memberError } = await adminSupabase
+    const { data: membership } = await adminSupabase
       .from('org_members')
       .select('role')
       .eq('user_id', user.id)
       .single()
 
-    if (memberError) console.error('Peptide inventory membership error:', memberError)
     if (!membership || (membership.role !== 'org_admin' && membership.role !== 'coach')) return null
     return user
-  } catch (err) {
-    console.error('Peptide inventory verifyAdmin error:', err)
+  } catch {
     return null
   }
 }
 
 // GET — List all inventory with low-stock alerts
-export async function GET(request: NextRequest) {
-  const user = await verifyAdmin(request)
+export async function GET() {
+  const user = await verifyAdmin()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const adminSupabase = createAdminClient()
 
-  const { data: inventory, error } = await adminSupabase
-    .from('peptide_inventory')
-    .select('*')
-    .order('peptide_name', { ascending: true })
+  // Use RPC function to bypass schema cache
+  const { data: inventory, error } = await adminSupabase.rpc('get_peptide_inventory')
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Get recent log entries
-  const { data: recentLogs } = await adminSupabase
-    .from('peptide_inventory_log')
-    .select('*, clients(first_name, last_name)')
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  // Get assigned peptide counts per peptide from active clients
+  // Get assigned peptide counts from active clients
   const { data: clients } = await adminSupabase
     .from('clients')
     .select('current_peptides')
@@ -65,29 +53,30 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Mark low stock items
-  const enriched = (inventory || []).map(item => ({
+  const items = inventory || []
+  const enriched = (Array.isArray(items) ? items : []).map((item: Record<string, unknown>) => ({
     ...item,
-    low_stock: item.quantity_on_hand <= item.reorder_threshold,
-    out_of_stock: item.quantity_on_hand === 0,
-    assigned_to_clients: assignedCounts[item.peptide_name.toUpperCase()] || 0,
+    low_stock: (item.quantity_on_hand as number) <= (item.reorder_threshold as number),
+    out_of_stock: (item.quantity_on_hand as number) === 0,
+    assigned_to_clients: assignedCounts[((item.peptide_name as string) || '').toUpperCase()] || 0,
   }))
 
   return NextResponse.json({
     inventory: enriched,
-    recentLogs: recentLogs || [],
+    recentLogs: [],
     summary: {
       total_items: enriched.length,
-      low_stock: enriched.filter(i => i.low_stock).length,
-      out_of_stock: enriched.filter(i => i.out_of_stock).length,
-      total_value: enriched.reduce((sum, i) => sum + (i.quantity_on_hand * (i.wholesale_cost || 0)), 0),
+      low_stock: enriched.filter((i: Record<string, unknown>) => i.low_stock).length,
+      out_of_stock: enriched.filter((i: Record<string, unknown>) => i.out_of_stock).length,
+      total_value: enriched.reduce((sum: number, i: Record<string, unknown>) =>
+        sum + ((i.quantity_on_hand as number) * ((i.wholesale_cost as number) || 0)), 0),
     },
   })
 }
 
 // POST — Add/update inventory item or log a transaction
 export async function POST(request: NextRequest) {
-  const user = await verifyAdmin(request)
+  const user = await verifyAdmin()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const adminSupabase = createAdminClient()
@@ -102,21 +91,16 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'peptide_name and size_label required' }, { status: 400 })
         }
 
-        const { data, error } = await adminSupabase
-          .from('peptide_inventory')
-          .upsert({
-            peptide_name,
-            size_label,
-            quantity_on_hand: quantity_on_hand ?? 0,
-            reorder_threshold: reorder_threshold ?? 2,
-            wholesale_cost: wholesale_cost ?? null,
-            retail_price: retail_price ?? null,
-            supplier: supplier ?? null,
-            notes: notes ?? null,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'peptide_name,size_label' })
-          .select()
-          .single()
+        const { data, error } = await adminSupabase.rpc('upsert_peptide_inventory', {
+          p_name: peptide_name,
+          p_size: size_label,
+          p_qty: quantity_on_hand ?? 0,
+          p_threshold: reorder_threshold ?? 2,
+          p_cost: wholesale_cost ? parseFloat(wholesale_cost) : null,
+          p_retail: retail_price ? parseFloat(retail_price) : null,
+          p_supplier: supplier || null,
+          p_notes: notes || null,
+        })
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
         return NextResponse.json({ item: data })
@@ -128,42 +112,24 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'inventory_id, transaction_action, and quantity required' }, { status: 400 })
         }
 
-        // Log the transaction
-        const { error: logError } = await adminSupabase
-          .from('peptide_inventory_log')
-          .insert({
-            inventory_id,
-            action: transaction_action,
-            quantity,
-            client_id: client_id || null,
-            notes: notes || null,
-            created_by: user.id,
-          })
+        const { error } = await adminSupabase.rpc('log_peptide_transaction', {
+          p_inventory_id: inventory_id,
+          p_action: transaction_action,
+          p_quantity: quantity,
+          p_client_id: client_id || null,
+          p_notes: notes || null,
+          p_created_by: user.id,
+        })
 
-        if (logError) return NextResponse.json({ error: logError.message }, { status: 500 })
-
-        // Update quantity on hand
-        const { data: current } = await adminSupabase
-          .from('peptide_inventory')
-          .select('quantity_on_hand')
-          .eq('id', inventory_id)
-          .single()
-
-        if (current) {
-          const newQty = Math.max(0, current.quantity_on_hand + quantity)
-          await adminSupabase
-            .from('peptide_inventory')
-            .update({ quantity_on_hand: newQty, updated_at: new Date().toISOString() })
-            .eq('id', inventory_id)
-        }
-
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
         return NextResponse.json({ success: true })
       }
 
       case 'delete_item': {
         const { id } = body
         if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-        const { error } = await adminSupabase.from('peptide_inventory').delete().eq('id', id)
+
+        const { error } = await adminSupabase.rpc('delete_peptide_inventory', { p_id: id })
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
         return NextResponse.json({ success: true })
       }
