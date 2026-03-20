@@ -50,8 +50,10 @@ export default function SignupPage() {
         return
       }
 
-      setSuccess('Account created! Redirecting to sign in...')
-      setTimeout(() => router.push('/login'), 2000)
+      setSuccess('Account created! Redirecting to complete your intake...')
+      setTimeout(() => {
+        window.location.href = 'https://forgedbyfreedom.org/onboarding'
+      }, 2000)
     } catch {
       setError('Network error. Please try again.')
     } finally {
@@ -73,7 +75,8 @@ export default function SignupPage() {
           <img src="/logo.png" alt="Forged By Freedom" className="h-20 mx-auto mb-4" />
           <h1 className="text-3xl font-black text-white tracking-widest">FORGED BY FREEDOM</h1>
           <p className="text-xs text-[#D4A017] font-semibold tracking-[0.3em] uppercase mt-2">Strength &bull; Discipline &bull; Freedom</p>
-          <p className="text-sm text-[#888] mt-4">Create your free account to get started</p>
+          <p className="text-sm text-[#888] mt-4">Create your account to get started</p>
+          <p className="text-xs text-[#666] mt-1">You&apos;ll complete a quick intake form after signup</p>
         </div>
 
         <form onSubmit={handleSignup} className="bg-[#141414] rounded-xl p-8 border border-[#2a2a2a]">
