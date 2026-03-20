@@ -115,6 +115,11 @@ export async function POST(request: NextRequest) {
       checkinData.workout_voice_transcript = checkinData.workout_description
     }
 
+    // Convert supplement_compliance from number (0-100) to boolean if needed
+    if (typeof checkinData.supplement_compliance === 'number') {
+      checkinData.supplement_compliance = checkinData.supplement_compliance > 0
+    }
+
     // Upsert check-in (same day = update)
     const { data: checkin, error: checkinError } = await supabase
       .from('checkins')
