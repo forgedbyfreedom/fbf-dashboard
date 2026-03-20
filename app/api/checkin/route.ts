@@ -121,7 +121,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Strip fields that don't exist in the checkins table
-    const fieldsToStrip = ['recommendation_opt_ins', 'resting_heart_rate', 'avg_heart_rate', 'workout_duration_min']
+    const fieldsToStrip = [
+      'recommendation_opt_ins', 'resting_heart_rate', 'avg_heart_rate', 'workout_duration_min',
+      'bjj_done', 'bjj_rounds', 'bjj_round_min', 'bjj_rest_min', 'bjj_drill_min', 'bjj_intensity', 'bjj_type',
+    ]
     for (const field of fieldsToStrip) {
       delete checkinData[field]
     }
