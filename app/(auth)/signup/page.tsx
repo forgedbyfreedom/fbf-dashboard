@@ -50,9 +50,9 @@ export default function SignupPage() {
         return
       }
 
-      setSuccess('Account created! Redirecting to complete your intake...')
+      setSuccess('Account created! Redirecting to sign in...')
       setTimeout(() => {
-        window.location.href = 'https://forgedbyfreedom.org/onboarding'
+        window.location.href = '/login'
       }, 2000)
     } catch {
       setError('Network error. Please try again.')
