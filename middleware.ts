@@ -73,6 +73,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/api/push/') ||
+    pathname.startsWith('/api/client/register') ||
     pathname.startsWith('/api/client/me') ||
     pathname.startsWith('/api/client/setup-coach') ||
     pathname.startsWith('/api/client/leaderboard') ||
@@ -87,7 +88,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Auth routes: redirect to dashboard if already logged in
-  if (pathname.startsWith('/login') || pathname.startsWith('/confirm')) {
+  if (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/confirm')) {
     if (user) {
       const url = request.nextUrl.clone()
       url.pathname = '/'

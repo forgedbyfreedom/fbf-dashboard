@@ -147,6 +147,10 @@ function LoginForm() {
         </form>
 
         <p className="text-center text-[#555] text-xs mt-6">
+          New here?{' '}
+          <a href="/signup" className="text-[#FF6A00] hover:underline">Create a Free Account</a>
+        </p>
+        <p className="text-center text-[#555] text-xs mt-2">
           Are you a client?{' '}
           <a href="/portal" className="text-[#FF6A00] hover:underline">Go to Client Portal</a>
         </p>
