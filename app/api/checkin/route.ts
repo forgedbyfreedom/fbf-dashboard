@@ -120,6 +120,12 @@ export async function POST(request: NextRequest) {
       checkinData.supplement_compliance = checkinData.supplement_compliance > 0
     }
 
+    // Strip fields that don't exist in the checkins table
+    const fieldsToStrip = ['recommendation_opt_ins', 'resting_heart_rate', 'avg_heart_rate', 'workout_duration_min']
+    for (const field of fieldsToStrip) {
+      delete checkinData[field]
+    }
+
     // Upsert check-in (same day = update)
     const { data: checkin, error: checkinError } = await supabase
       .from('checkins')
