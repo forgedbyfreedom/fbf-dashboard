@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { updateClientMetrics } from '@/lib/metrics'
+import { updateStreaks } from '@/lib/gamification'
 
 const DEFAULT_ORG_ID = process.env.DEFAULT_ORG_ID || ''
 const DEFAULT_COACH_USER_ID = process.env.DEFAULT_COACH_USER_ID || ''
@@ -186,7 +188,14 @@ export async function POST(request: NextRequest) {
 
       if (seedError) {
         console.error('Seed data error:', seedError)
-        // Don't fail registration if seeding fails
+      }
+
+      // Compute metrics and streaks from seed data
+      try {
+        await updateClientMetrics(adminSupabase, clientId)
+        await updateStreaks(adminSupabase, clientId)
+      } catch (metricsErr) {
+        console.error('Metrics/streak seed error:', metricsErr)
       }
     }
 
