@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getUserFromRequest, authorizeClientAccess } from '@/lib/auth-check'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReportData } from '@/lib/reports/generate'
 import { renderToBuffer } from '@react-pdf/renderer'
@@ -9,8 +9,7 @@ import React from 'react'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -18,6 +17,11 @@ export async function GET(request: NextRequest) {
     const clientId = request.nextUrl.searchParams.get('client_id')
     if (!clientId) {
       return NextResponse.json({ error: 'client_id is required' }, { status: 400 })
+    }
+
+    const access = await authorizeClientAccess(user.id, clientId)
+    if (!access.authorized) {
+      return NextResponse.json({ error: access.reason }, { status: 403 })
     }
 
     const adminSupabase = createAdminClient()
@@ -36,8 +40,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getUserFromRequest(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -49,14 +52,16 @@ export async function POST(request: NextRequest) {
       return handleResend(body.report_id)
     }
 
-    const { client_id, report_type = 'weekly' } = body
+    const { client_id, days } = body
+    const report_type = days && days > 14 ? 'monthly' : 'weekly'
 
     if (!client_id) {
       return NextResponse.json({ error: 'client_id is required' }, { status: 400 })
     }
 
-    if (!['weekly', 'monthly'].includes(report_type)) {
-      return NextResponse.json({ error: 'report_type must be weekly or monthly' }, { status: 400 })
+    const access = await authorizeClientAccess(user.id, client_id)
+    if (!access.authorized) {
+      return NextResponse.json({ error: access.reason }, { status: 403 })
     }
 
     // Generate report data

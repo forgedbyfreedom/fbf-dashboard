@@ -76,7 +76,7 @@ export default function ClientCard({ metric }: { metric: ClientMetric }) {
 
   return (
     <tr
-      onClick={() => router.push(`/portal/client/${client.id}`)}
+      onClick={() => router.push(`/clients/${client.id}`)}
       className="border-b border-[#2a2a2a] hover:bg-[#1a1a1a] cursor-pointer transition-colors"
     >
       <td className="px-4 py-3">

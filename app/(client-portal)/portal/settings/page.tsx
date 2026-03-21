@@ -404,18 +404,16 @@ export default function SettingsPage() {
 
       {/* Sign Out */}
       <div className="text-center pb-8">
-        <form action="/api/auth/signout" method="POST">
-          <button
-            type="button"
-            onClick={async () => {
-              await supabase.auth.signOut()
-              window.location.href = '/login'
-            }}
-            className="text-sm text-red-400 hover:text-red-300 transition-colors"
-          >
-            Sign Out
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={async () => {
+            await supabase.auth.signOut()
+            window.location.href = '/login'
+          }}
+          className="text-sm text-red-400 hover:text-red-300 transition-colors"
+        >
+          Sign Out
+        </button>
         <p className="text-[10px] text-[#444] mt-4">Forged by Freedom v1.0.0</p>
       </div>
     </div>

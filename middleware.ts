@@ -82,6 +82,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/clients/') ||
     pathname.startsWith('/api/notifications/') ||
     pathname.startsWith('/api/upload') ||
+    pathname.startsWith('/api/garmin') ||
     pathname.startsWith('/book-consult')
   ) {
     return setCorsHeaders(supabaseResponse, origin)

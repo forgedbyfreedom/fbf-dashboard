@@ -153,7 +153,6 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
     { id: 'latest', label: 'Latest' },
     { id: 'wellness', label: 'Wellness' },
     { id: 'program', label: 'Program' },
-    { id: 'protocol', label: 'Protocol' },
     { id: 'trends', label: 'Trends' },
     { id: 'timeline', label: 'Timeline' },
     { id: 'notes', label: 'Notes' },
@@ -421,28 +420,6 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                 />
                 <ProgramImport clientId={client.id} onImported={() => window.location.reload()} />
               </div>
-            )}
-
-            {activeTab === 'protocol' && (
-              <ProgramEditor
-                clientId={client.id}
-                programName={client.program_name}
-                targetCalories={client.target_calories}
-                targetProtein={client.target_protein}
-                targetCarbs={client.target_carbs}
-                targetFats={client.target_fats}
-                targetWaterOz={client.target_water_oz}
-                targetSteps={client.target_steps}
-                weigh_in_day={client.weigh_in_day}
-                workoutProgram={client.workout_program}
-                cardioProtocol={client.cardio_protocol}
-                mealPlan={client.meal_plan}
-                medicalProtocol={client.medical_protocol}
-                currentSupplements={client.current_supplements as Array<{name: string; dose: string; frequency: string; [key: string]: string}>}
-                currentPeds={client.current_peds as Array<{compound: string; dose: string; frequency: string; route: string; [key: string]: string}>}
-                currentPeptides={client.current_peptides as Array<{name: string; dose: string; frequency: string; timing: string; [key: string]: string}>}
-                onSaved={() => window.location.reload()}
-              />
             )}
 
             {activeTab === 'trends' && (
