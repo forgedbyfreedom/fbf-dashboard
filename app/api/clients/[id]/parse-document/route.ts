@@ -82,24 +82,39 @@ async function anthropicVisionRequest(
   else if (imageUrl.match(/\.gif/i)) mediaType = 'image/gif'
   else if (imageUrl.match(/\.pdf/i)) mediaType = 'application/pdf'
 
-  // For PDFs, use document type; for images, use image type
   const isPdf = mediaType === 'application/pdf'
 
-  const content = isPdf
-    ? [
-        {
-          type: 'document' as const,
-          source: { type: 'url' as const, url: imageUrl },
+  // Download the image/PDF and convert to base64 (Supabase signed URLs
+  // can't be fetched by Anthropic's servers directly)
+  let content
+  if (isPdf) {
+    // PDFs: try URL first, fall back to base64
+    content = [
+      {
+        type: 'document' as const,
+        source: { type: 'url' as const, url: imageUrl },
+      },
+      { type: 'text' as const, text: userPrompt },
+    ]
+  } else {
+    // Images: download and send as base64
+    const imgRes = await fetch(imageUrl)
+    if (!imgRes.ok) throw new Error(`Failed to download image: ${imgRes.status}`)
+    const buffer = await imgRes.arrayBuffer()
+    const base64 = Buffer.from(buffer).toString('base64')
+
+    content = [
+      {
+        type: 'image' as const,
+        source: {
+          type: 'base64' as const,
+          media_type: mediaType as 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif',
+          data: base64,
         },
-        { type: 'text' as const, text: userPrompt },
-      ]
-    : [
-        {
-          type: 'image' as const,
-          source: { type: 'url' as const, url: imageUrl },
-        },
-        { type: 'text' as const, text: userPrompt },
-      ]
+      },
+      { type: 'text' as const, text: userPrompt },
+    ]
+  }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
