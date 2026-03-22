@@ -85,6 +85,20 @@ export default function BodyCompChart({ clientId }: BodyCompChartProps) {
 
   const selectedScan = scans.find(s => s.id === selectedScanId)
 
+  const handleDeleteScan = async (scanId: string) => {
+    if (!confirm('Delete this scan? This cannot be undone.')) return
+    try {
+      const res = await fetch(`/api/clients/${clientId}/scans`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scan_id: scanId }),
+      })
+      if (res.ok) fetchScans()
+    } catch (err) {
+      console.error('Failed to delete scan:', err)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -170,6 +184,13 @@ export default function BodyCompChart({ clientId }: BodyCompChartProps) {
                     }`}
                   >
                     {s.analysis_text ? 'View Analysis' : 'Analyze'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteScan(s.id)}
+                    className="text-xs text-red-400/40 hover:text-red-400 transition-colors ml-2"
+                    title="Delete scan"
+                  >
+                    X
                   </button>
                 </div>
               ))}

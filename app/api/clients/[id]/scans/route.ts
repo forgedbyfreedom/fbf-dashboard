@@ -92,3 +92,41 @@ export async function POST(
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: clientId } = await params
+    const user = await getUserFromRequest(request)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const access = await authorizeClientAccess(user.id, clientId)
+    if (!access.authorized) {
+      return NextResponse.json({ error: access.reason }, { status: 403 })
+    }
+
+    const { scan_id } = await request.json()
+    if (!scan_id) {
+      return NextResponse.json({ error: 'scan_id required' }, { status: 400 })
+    }
+
+    const adminSupabase = createAdminClient()
+    const { error } = await adminSupabase
+      .from('body_composition_scans')
+      .delete()
+      .eq('id', scan_id)
+      .eq('client_id', clientId)
+
+    if (error) {
+      return NextResponse.json({ error: 'Failed to delete scan' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch {
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  }
+}

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       .filter((d) => d.calendarDate)
       .map((d) => ({
         client_id: client_id || null,
-        source: 'garmin',
+        provider: 'garmin',
         date: d.calendarDate,
         steps: d.steps ?? null,
         resting_hr: d.restingHeartRate ?? null,
@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
         max_hr: d.maxHeartRate ?? null,
         floors_climbed: d.floorsClimbed ?? null,
         distance_meters: d.totalDistanceMeters ?? null,
-        active_calories: d.activeKilocalories ?? null,
-        total_calories: d.totalKilocalories ?? null,
-        sleep_seconds: d.sleepTimeSeconds ?? null,
-        avg_stress: d.averageStressLevel ?? null,
+        calories_total: d.totalKilocalories ?? null,
+        active_minutes: d.activeKilocalories ? Math.round(d.activeKilocalories / 8) : null,
+        sleep_hours: d.sleepTimeSeconds ? Math.round((d.sleepTimeSeconds / 3600) * 100) / 100 : null,
+        stress_avg: d.averageStressLevel ?? null,
         body_battery_high: d.bodyBatteryHighest ?? null,
         body_battery_low: d.bodyBatteryLowest ?? null,
         spo2_avg: d.spo2Average ?? null,
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     const { error } = await adminSupabase
       .from('wearable_data')
-      .upsert(rows, { onConflict: 'client_id,source,date' })
+      .upsert(rows, { onConflict: 'date,provider,client_id' })
 
     if (error) {
       console.error('Garmin import error:', error)

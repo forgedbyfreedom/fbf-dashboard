@@ -283,7 +283,23 @@ export default function BloodworkUpload({ clientId, clientName }: BloodworkUploa
                         <span className="text-xs text-red-400">{flagged} flagged</span>
                       )}
                     </div>
-                    <span className="text-[#555] text-xs">{isExpanded ? 'Hide' : 'Show'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#555] text-xs">{isExpanded ? 'Hide' : 'Show'}</span>
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (!confirm('Delete this bloodwork result?')) return
+                          fetch(`/api/clients/${clientId}/bloodwork`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ result_id: result.id }),
+                          }).then(res => { if (res.ok) fetchResults() })
+                        }}
+                        className="text-xs text-red-400/40 hover:text-red-400 cursor-pointer transition-colors"
+                      >
+                        X
+                      </span>
+                    </div>
                   </button>
 
                   {isExpanded && (
