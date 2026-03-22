@@ -65,7 +65,8 @@ export default function ScanUpload({ clientId, onScanSaved }: ScanUploadProps) {
       })
 
       if (!uploadRes.ok) {
-        throw new Error('File upload failed')
+        const errData = await uploadRes.json().catch(() => ({}))
+        throw new Error(errData.error || 'File upload failed')
       }
 
       const { file_url, file_type } = await uploadRes.json()

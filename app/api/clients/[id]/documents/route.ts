@@ -38,7 +38,7 @@ export async function POST(
 
     if (uploadError) {
       console.error('Upload error:', uploadError)
-      return NextResponse.json({ error: 'File upload failed' }, { status: 500 })
+      return NextResponse.json({ error: `File upload failed: ${uploadError.message}` }, { status: 500 })
     }
 
     const { data: urlData } = adminSupabase.storage
