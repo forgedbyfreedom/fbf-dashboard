@@ -399,6 +399,24 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
 
             {activeTab === 'program' && (
               <div className="space-y-4">
+                <div className="flex gap-2 flex-wrap">
+                  <a
+                    href={`/api/clients/${client.id}/exports/meal-plan`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#141414] border border-[#2a2a2a] rounded-lg text-xs font-medium text-[#ccc] hover:border-[#FF6A00] hover:text-[#FF6A00] transition-colors"
+                  >
+                    Export Meal Plan
+                  </a>
+                  <a
+                    href={`/api/clients/${client.id}/exports/grocery-list`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#141414] border border-[#2a2a2a] rounded-lg text-xs font-medium text-[#ccc] hover:border-[#FF6A00] hover:text-[#FF6A00] transition-colors"
+                  >
+                    Export Grocery List
+                  </a>
+                </div>
                 <ProgramEditor
                   clientId={client.id}
                   programName={client.program_name}
@@ -437,6 +455,18 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
 
             {activeTab === 'timeline' && (
               <div className="space-y-4">
+                {checkins.some(c => c.progress_photo_urls && c.progress_photo_urls.length > 0) && (
+                  <div className="flex gap-2">
+                    <a
+                      href={`/api/clients/${client.id}/exports/progress-photos`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#141414] border border-[#2a2a2a] rounded-lg text-xs font-medium text-[#ccc] hover:border-[#FF6A00] hover:text-[#FF6A00] transition-colors"
+                    >
+                      Export Progress Photos
+                    </a>
+                  </div>
+                )}
                 <Timeline checkins={checkins} />
                 {/* Progress Photos */}
                 {checkins.some(c => c.progress_photo_urls && c.progress_photo_urls.length > 0) && (
