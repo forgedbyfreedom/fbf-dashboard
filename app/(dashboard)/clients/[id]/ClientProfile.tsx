@@ -128,14 +128,19 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
   const [generatingIntake, setGeneratingIntake] = useState(false)
   const [intakeCopied, setIntakeCopied] = useState(false)
   const [intakeStatus, setIntakeStatus] = useState<{ completed: boolean; completed_at: string | null; loading: boolean }>({ completed: false, completed_at: null, loading: true })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [fullIntake, setFullIntake] = useState<Record<string, any> | null>(null)
+  const [sendingIntakeEmail, setSendingIntakeEmail] = useState(false)
+  const [intakeEmailSent, setIntakeEmailSent] = useState(false)
 
   // Fetch intake status on mount
   useEffect(() => {
     async function checkIntake() {
       try {
-        const res = await fetch(`/api/intake?client_id=${client.id}`)
+        const res = await fetch(`/api/admin/intakes?client_id=${client.id}`)
         const data = await res.json()
         if (data.intake) {
+          setFullIntake(data.intake)
           setIntakeStatus({ completed: !!data.intake.completed_at, completed_at: data.intake.completed_at, loading: false })
         } else {
           setIntakeStatus({ completed: false, completed_at: null, loading: false })
@@ -146,6 +151,27 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
     }
     checkIntake()
   }, [client.id])
+
+  const handleSendIntakeEmail = async () => {
+    if (!client.email) return
+    setSendingIntakeEmail(true)
+    try {
+      const res = await fetch('/api/admin/intakes/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: client.id, email: client.email }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setIntakeEmailSent(true)
+      if (data.onboarding_link) setIntakeUrl(data.onboarding_link)
+      setTimeout(() => setIntakeEmailSent(false), 3000)
+    } catch (err) {
+      console.error('Failed to send intake email:', err)
+    } finally {
+      setSendingIntakeEmail(false)
+    }
+  }
 
   const handleGenerateIntakeLink = async () => {
     setGeneratingIntake(true)
@@ -205,6 +231,7 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
     { id: 'schedule', label: 'Schedule' },
     { id: 'sms', label: 'SMS' },
     { id: 'reports', label: 'Reports' },
+    { id: 'intake', label: 'Intake' },
     { id: 'settings', label: 'Settings' },
   ]
 
@@ -559,6 +586,194 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
 
             {activeTab === 'reports' && (
               <ReportsList clientId={client.id} />
+            )}
+
+            {activeTab === 'intake' && (
+              <div className="space-y-4">
+                {/* Waiver Status */}
+                <Card>
+                  <h3 className="text-sm font-semibold text-[#888] mb-4">Liability Waiver</h3>
+                  {intakeStatus.loading ? (
+                    <div className="flex items-center gap-2 text-sm text-[#555]">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#FF6A00]"></div>
+                      Loading...
+                    </div>
+                  ) : fullIntake?.waiver_accepted ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-400 text-lg">&#10003;</span>
+                        <span className="text-green-400 font-medium text-sm">Waiver Signed</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-[#555]">Signature</p>
+                          <p className="text-white">{client.first_name} {client.last_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Signed Date</p>
+                          <p className="text-white">
+                            {fullIntake.waiver_accepted_at
+                              ? new Date(fullIntake.waiver_accepted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                              : '—'}
+                          </p>
+                        </div>
+                        {fullIntake.waiver_ip && (
+                          <div>
+                            <p className="text-[#555]">IP Address</p>
+                            <p className="text-white">{fullIntake.waiver_ip}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-400 text-lg">&#10007;</span>
+                      <span className="text-red-400 font-medium text-sm">Waiver Not Signed</span>
+                    </div>
+                  )}
+                </Card>
+
+                {/* Intake Form Answers */}
+                {fullIntake ? (
+                  <>
+                    {/* Personal Info */}
+                    <Card>
+                      <h3 className="text-sm font-semibold text-[#888] mb-4">Personal Info</h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-[#555]">Phone</p>
+                          <p className="text-white">{fullIntake.phone || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Date of Birth</p>
+                          <p className="text-white">{fullIntake.date_of_birth || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Emergency Contact</p>
+                          <p className="text-white">{fullIntake.emergency_contact_name || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Emergency Phone</p>
+                          <p className="text-white">{fullIntake.emergency_contact_phone || '—'}</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Health History */}
+                    <Card>
+                      <h3 className="text-sm font-semibold text-[#888] mb-4">Health History</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-[#555]">Medical Conditions</p>
+                          <p className="text-white">{fullIntake.medical_conditions || 'None reported'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Current Medications</p>
+                          <p className="text-white">{fullIntake.current_medications || 'None reported'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Allergies</p>
+                          <p className="text-white">{fullIntake.allergies || 'None reported'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Injuries or Limitations</p>
+                          <p className="text-white">{fullIntake.injuries_or_limitations || 'None reported'}</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Body Composition */}
+                    <Card>
+                      <h3 className="text-sm font-semibold text-[#888] mb-4">Body Composition</h3>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <p className="text-[#555]">Height</p>
+                          <p className="text-white">
+                            {fullIntake.height_inches
+                              ? `${Math.floor(fullIntake.height_inches / 12)}'${fullIntake.height_inches % 12}"`
+                              : '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Current Weight</p>
+                          <p className="text-white">{fullIntake.current_weight_lbs ? `${fullIntake.current_weight_lbs} lbs` : '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Goal Weight</p>
+                          <p className="text-white">{fullIntake.goal_weight_lbs ? `${fullIntake.goal_weight_lbs} lbs` : '—'}</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Training Background */}
+                    <Card>
+                      <h3 className="text-sm font-semibold text-[#888] mb-4">Training Background</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-[#555]">Training Experience</p>
+                          <p className="text-white">{fullIntake.training_experience || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Previous Coaches</p>
+                          <p className="text-white">{fullIntake.previous_coaches || 'None'}</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Goals & Other */}
+                    <Card>
+                      <h3 className="text-sm font-semibold text-[#888] mb-4">Goals & Other</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-[#555]">Primary Goals</p>
+                          <p className="text-white">{fullIntake.primary_goals || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">Dietary Restrictions</p>
+                          <p className="text-white">{fullIntake.dietary_restrictions || 'None'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#555]">How Did You Hear About Us</p>
+                          <p className="text-white">{fullIntake.how_did_you_hear || '—'}</p>
+                        </div>
+                        {fullIntake.completed_at && (
+                          <div>
+                            <p className="text-[#555]">Completed</p>
+                            <p className="text-white">
+                              {new Date(fullIntake.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  </>
+                ) : (
+                  <Card>
+                    <div className="text-center py-8">
+                      <p className="text-[#555] mb-4">No intake form submitted</p>
+                      <div className="flex justify-center gap-3">
+                        <Button size="sm" onClick={handleGenerateIntakeLink} disabled={generatingIntake}>
+                          {generatingIntake ? 'Generating...' : 'Generate Intake Link'}
+                        </Button>
+                        {client.email && (
+                          <Button size="sm" variant="secondary" onClick={handleSendIntakeEmail} disabled={sendingIntakeEmail}>
+                            {intakeEmailSent ? 'Sent!' : sendingIntakeEmail ? 'Sending...' : 'Send Onboarding Form'}
+                          </Button>
+                        )}
+                      </div>
+                      {intakeUrl && (
+                        <div className="mt-4 p-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-left">
+                          <p className="text-xs text-[#888] mb-1">Intake URL:</p>
+                          <p className="text-sm text-[#FF6A00] break-all">{intakeUrl}</p>
+                          <Button size="sm" className="mt-2" onClick={copyIntakeLink}>
+                            {intakeCopied ? 'Copied!' : 'Copy Link'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
+              </div>
             )}
 
             {activeTab === 'settings' && (

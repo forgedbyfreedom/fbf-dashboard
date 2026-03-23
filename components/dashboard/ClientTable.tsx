@@ -30,7 +30,12 @@ interface ClientMetric {
 type SortKey = 'name' | 'status' | 'last_checkin' | 'adherence'
 type FilterKey = 'all' | 'red' | 'yellow' | 'missed'
 
-export default function ClientTable({ metrics }: { metrics: ClientMetric[] }) {
+interface IntakeStatus {
+  completed: boolean
+  waiver: boolean
+}
+
+export default function ClientTable({ metrics, intakeStatusMap = {} }: { metrics: ClientMetric[]; intakeStatusMap?: Record<string, IntakeStatus> }) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterKey>('all')
   const [sortBy, setSortBy] = useState<SortKey>('status')
@@ -150,6 +155,7 @@ export default function ClientTable({ metrics }: { metrics: ClientMetric[] }) {
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Water</th>
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Supps</th>
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Weight (7d/30d)</th>
+                <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider">Intake</th>
                 <th className="px-4 py-3 text-xs font-medium text-[#888] uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => handleSort('status')}>
                   Flags {sortBy === 'status' && (sortDir === 'asc' ? '↑' : '↓')}
                 </th>
@@ -157,11 +163,11 @@ export default function ClientTable({ metrics }: { metrics: ClientMetric[] }) {
             </thead>
             <tbody>
               {filtered.map(metric => (
-                <ClientCard key={metric.client_id} metric={metric} />
+                <ClientCard key={metric.client_id} metric={metric} intakeStatus={intakeStatusMap[metric.client_id]} />
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={13} className="px-4 py-12 text-center text-[#555]">
+                  <td colSpan={14} className="px-4 py-12 text-center text-[#555]">
                     {search || filter !== 'all' ? 'No clients match your filters.' : 'No clients yet. Add your first client to get started.'}
                   </td>
                 </tr>

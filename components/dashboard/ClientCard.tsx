@@ -28,7 +28,12 @@ interface ClientMetric {
   open_flags_count: number
 }
 
-export default function ClientCard({ metric }: { metric: ClientMetric }) {
+interface IntakeStatus {
+  completed: boolean
+  waiver: boolean
+}
+
+export default function ClientCard({ metric, intakeStatus }: { metric: ClientMetric; intakeStatus?: IntakeStatus }) {
   const router = useRouter()
   const client = metric.clients
 
@@ -110,6 +115,19 @@ export default function ClientCard({ metric }: { metric: ClientMetric }) {
         <span className="text-xs ml-1">
           ({formatDelta(metric.weight_delta_7d)} / {formatDelta(metric.weight_delta_30d)})
         </span>
+      </td>
+      <td className="px-4 py-3">
+        {intakeStatus ? (
+          intakeStatus.completed && intakeStatus.waiver ? (
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" title="Intake complete, waiver signed" />
+          ) : intakeStatus.completed ? (
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500" title="Intake submitted, waiver not signed" />
+          ) : (
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" title="No intake" />
+          )
+        ) : (
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" title="No intake" />
+        )}
       </td>
       <td className="px-4 py-3">
         <FlagBadge severity={metric.status} count={metric.open_flags_count} />

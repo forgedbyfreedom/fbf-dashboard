@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import ClientTable from '@/components/dashboard/ClientTable'
 import AddClientButton from './AddClientButton'
 
@@ -32,6 +33,23 @@ export default async function DashboardHome() {
 
   const { data: metrics } = await query
 
+  // Fetch intake status for all clients
+  let intakeStatusMap: Record<string, { completed: boolean; waiver: boolean }> = {}
+  if (metrics && metrics.length > 0) {
+    const adminSupabase = createAdminClient()
+    const clientIds = metrics.map((m: { client_id: string }) => m.client_id)
+    const { data: intakes } = await adminSupabase
+      .from('client_intake')
+      .select('client_id, completed_at, waiver_accepted')
+      .in('client_id', clientIds)
+
+    if (intakes) {
+      intakeStatusMap = Object.fromEntries(
+        intakes.map(i => [i.client_id, { completed: !!i.completed_at, waiver: !!i.waiver_accepted }])
+      )
+    }
+  }
+
   return (
     <div>
       <div className="text-center mb-8">
@@ -48,7 +66,7 @@ export default async function DashboardHome() {
         <AddClientButton />
       </div>
 
-      <ClientTable metrics={metrics || []} />
+      <ClientTable metrics={metrics || []} intakeStatusMap={intakeStatusMap} />
 
       {/* Coach Credentials */}
       <div className="mt-12 border-t border-[#2a2a2a] pt-8">
