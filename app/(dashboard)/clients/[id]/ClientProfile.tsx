@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Tabs from '@/components/ui/Tabs'
 import Card from '@/components/ui/Card'
@@ -18,6 +18,119 @@ import ClientScheduleTab from '@/components/dashboard/ClientScheduleTab'
 import SMSPanel from '@/components/dashboard/SMSPanel'
 import BloodworkUpload from '@/components/dashboard/BloodworkUpload'
 import { ScheduledCheckin } from '@/types/scheduled-checkin'
+
+function IntakeTab({ clientId, clientEmail, clientName }: { clientId: string; clientEmail: string | null; clientName: string }) {
+  const [intake, setIntake] = useState<Record<string, unknown> | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  const fetchIntake = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/intakes?client_id=${clientId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setIntake(data.intake || null)
+      }
+    } catch { /* ignore */ }
+    finally { setLoading(false) }
+  }, [clientId])
+
+  useEffect(() => { fetchIntake() }, [fetchIntake])
+
+  const sendOnboarding = async () => {
+    if (!clientEmail) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/admin/intakes/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: clientId, email: clientEmail }),
+      })
+      if (res.ok) setSent(true)
+    } catch { /* ignore */ }
+    finally { setSending(false) }
+  }
+
+  if (loading) return <p className="text-sm text-[#555]">Loading intake...</p>
+
+  if (!intake) {
+    return (
+      <Card>
+        <div className="text-center py-8">
+          <p className="text-red-400 text-lg mb-2">No Intake Form Submitted</p>
+          <p className="text-[#888] text-sm mb-6">This client has not completed the onboarding intake form or waiver.</p>
+          {sent ? (
+            <p className="text-green-400 text-sm">Onboarding form sent to {clientEmail}</p>
+          ) : (
+            <button
+              onClick={sendOnboarding}
+              disabled={sending || !clientEmail}
+              className="px-6 py-3 bg-[#FF6A00] text-white font-semibold rounded-lg hover:bg-[#e55f00] disabled:opacity-50"
+            >
+              {sending ? 'Sending...' : `Send Onboarding Form to ${clientEmail || 'No email'}`}
+            </button>
+          )}
+        </div>
+      </Card>
+    )
+  }
+
+  const waiverSigned = !!(intake.waiver_signature)
+  const sections = [
+    { title: 'Personal Information', fields: ['full_name', 'dob', 'gender', 'location', 'emergency_contact', 'physician'] },
+    { title: 'Health History', fields: ['health_conditions', 'medications', 'surgeries_injuries', 'physical_limitations', 'tobacco_use', 'alcohol_use'] },
+    { title: 'Hormone & Lab Status', fields: ['bloodwork_history', 'last_panel', 'trt_hrt', 'peptide_experience', 'bloodwork_willing', 'physician_referral_needed'] },
+    { title: 'Training Background', fields: ['training_years', 'training_week', 'training_history', 'current_lifts', 'cardio', 'equipment_access'] },
+    { title: 'Body Composition', fields: ['current_weight', 'height', 'body_fat_estimate', 'goal_weight', 'goal_body_fat'] },
+    { title: 'Nutrition', fields: ['current_diet', 'meals_per_day', 'food_allergies', 'diet_preferences', 'supplement_budget'] },
+    { title: 'Goals & Other', fields: ['primary_goal', 'timeline', 'motivation', 'biggest_challenge', 'peptide_interest', 'compounds_interest', 'additional_notes'] },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <h3 className="text-sm font-semibold text-[#888] mb-4 uppercase tracking-wider">Waiver Status</h3>
+        <div className="flex items-center gap-3 mb-3">
+          <span className={`w-4 h-4 rounded-full ${waiverSigned ? 'bg-green-400' : 'bg-red-400'}`} />
+          <span className={`text-sm font-semibold ${waiverSigned ? 'text-green-400' : 'text-red-400'}`}>
+            {waiverSigned ? 'Waiver Signed' : 'Waiver NOT Signed'}
+          </span>
+        </div>
+        {waiverSigned && (
+          <div className="text-sm space-y-1 text-[#888]">
+            <p>Signature: <span className="text-white italic">{String(intake.waiver_signature)}</span></p>
+            <p>Initials: <span className="text-white">{String(intake.waiver_initials || '—')}</span></p>
+            <p>Signed: <span className="text-white">{intake.waiver_signed_date ? new Date(String(intake.waiver_signed_date)).toLocaleDateString() : '—'}</span></p>
+          </div>
+        )}
+      </Card>
+
+      {sections.map(section => {
+        const hasData = section.fields.some(f => intake[f])
+        if (!hasData) return null
+        return (
+          <Card key={section.title}>
+            <h3 className="text-sm font-semibold text-[#888] mb-3 uppercase tracking-wider">{section.title}</h3>
+            <div className="space-y-2">
+              {section.fields.map(field => {
+                const val = intake[field]
+                if (!val) return null
+                const label = field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                return (
+                  <div key={field} className="flex flex-col sm:flex-row sm:gap-4 py-1.5 border-b border-[#1a1a1a] last:border-0">
+                    <span className="text-xs text-[#555] sm:w-40 flex-shrink-0">{label}</span>
+                    <span className="text-sm text-white">{String(val)}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
 
 interface ProtocolItem {
   [key: string]: string
@@ -159,6 +272,7 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
     { id: 'schedule', label: 'Schedule' },
     { id: 'sms', label: 'SMS' },
     { id: 'reports', label: 'Reports' },
+    { id: 'intake', label: 'Intake' },
     { id: 'settings', label: 'Settings' },
   ]
 
@@ -513,6 +627,10 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
 
             {activeTab === 'reports' && (
               <ReportsList clientId={client.id} />
+            )}
+
+            {activeTab === 'intake' && (
+              <IntakeTab clientId={client.id} clientEmail={client.email} clientName={`${client.first_name} ${client.last_name}`} />
             )}
 
             {activeTab === 'settings' && (
