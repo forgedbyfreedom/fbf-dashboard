@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Tabs from '@/components/ui/Tabs'
 import Card from '@/components/ui/Card'
@@ -124,6 +124,52 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
   const [generatedUrl, setGeneratedUrl] = useState('')
   const [generatingLink, setGeneratingLink] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [intakeUrl, setIntakeUrl] = useState('')
+  const [generatingIntake, setGeneratingIntake] = useState(false)
+  const [intakeCopied, setIntakeCopied] = useState(false)
+  const [intakeStatus, setIntakeStatus] = useState<{ completed: boolean; completed_at: string | null; loading: boolean }>({ completed: false, completed_at: null, loading: true })
+
+  // Fetch intake status on mount
+  useEffect(() => {
+    async function checkIntake() {
+      try {
+        const res = await fetch(`/api/intake?client_id=${client.id}`)
+        const data = await res.json()
+        if (data.intake) {
+          setIntakeStatus({ completed: !!data.intake.completed_at, completed_at: data.intake.completed_at, loading: false })
+        } else {
+          setIntakeStatus({ completed: false, completed_at: null, loading: false })
+        }
+      } catch {
+        setIntakeStatus({ completed: false, completed_at: null, loading: false })
+      }
+    }
+    checkIntake()
+  }, [client.id])
+
+  const handleGenerateIntakeLink = async () => {
+    setGeneratingIntake(true)
+    try {
+      const res = await fetch('/api/intake/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: client.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setIntakeUrl(data.intake_url)
+    } catch (err) {
+      console.error('Failed to generate intake link:', err)
+    } finally {
+      setGeneratingIntake(false)
+    }
+  }
+
+  const copyIntakeLink = () => {
+    navigator.clipboard.writeText(intakeUrl)
+    setIntakeCopied(true)
+    setTimeout(() => setIntakeCopied(false), 2000)
+  }
 
   const handleGenerateLink = async () => {
     setGeneratingLink(true)
@@ -564,6 +610,59 @@ export default function ClientProfile({ client, checkins, flags, notes, links, m
                 </Card>
 
                 <BloodworkUpload clientId={client.id} clientName={client.first_name} />
+
+                <Card>
+                  <h3 className="text-sm font-semibold text-[#888] mb-4">Client Intake Form</h3>
+                  {intakeStatus.loading ? (
+                    <div className="flex items-center gap-2 text-sm text-[#555]">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#FF6A00]"></div>
+                      Loading...
+                    </div>
+                  ) : intakeStatus.completed ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="green">Completed</Badge>
+                        <span className="text-xs text-[#555]">
+                          {intakeStatus.completed_at && new Date(intakeStatus.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#555]">
+                        {client.first_name} has completed their intake form including the liability waiver.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge variant="yellow">Pending</Badge>
+                        <span className="text-xs text-[#888]">Intake form not yet completed</span>
+                      </div>
+
+                      {intakeUrl ? (
+                        <div className="space-y-3">
+                          <div className="p-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg">
+                            <p className="text-xs text-[#888] mb-1">Client Intake URL:</p>
+                            <p className="text-sm text-[#FF6A00] break-all">{intakeUrl}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={copyIntakeLink}>
+                              {intakeCopied ? 'Copied!' : 'Copy Intake Link'}
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={handleGenerateIntakeLink} disabled={generatingIntake}>
+                              Regenerate
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button size="sm" onClick={handleGenerateIntakeLink} disabled={generatingIntake}>
+                          {generatingIntake ? 'Generating...' : 'Generate Intake Link'}
+                        </Button>
+                      )}
+                      <p className="text-xs text-[#555] mt-3">
+                        Send this link to {client.first_name}. No login required — they fill out their intake form including health info and waiver.
+                      </p>
+                    </div>
+                  )}
+                </Card>
 
                 <Card>
                   <h3 className="text-sm font-semibold text-[#888] mb-4">Check-in Link</h3>

@@ -19,6 +19,7 @@ export default function DashboardNav({ userName, orgName, role, avatarUrl }: Das
   const links = [
     { href: '/', label: 'Dashboard' },
     { href: '/calendar', label: 'Calendar' },
+    { href: '/intake', label: 'Intake' },
     { href: '/instagram', label: 'Instagram' },
     { href: '/chat', label: 'Chat' },
     ...(role === 'org_admin' ? [
