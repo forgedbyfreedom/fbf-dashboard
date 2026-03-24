@@ -16,14 +16,8 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
     return null
   }
 
-  // On Resend free tier, we can only send to the account owner email
-  // Send to forgedbyfreedom@gmail.com with the intended recipient in the subject
-  // Gmail forwarding rules will route to Bryan and Wendy
   const cleanTo = to.replace(/[\n\r\s]/g, '').trim()
-  const canSendTo = cleanTo === 'forgedbyfreedom@gmail.com'
-  const actualTo = canSendTo ? cleanTo : 'forgedbyfreedom@gmail.com'
   const cleanSubject = subject.replace(/[\n\r]/g, ' ').trim()
-  const actualSubject = canSendTo ? cleanSubject : `[FWD ${cleanTo}] ${cleanSubject}`.replace(/[\n\r]/g, ' ')
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -32,9 +26,9 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'onboarding@resend.dev',
-      to: actualTo,
-      subject: actualSubject,
+      from: 'Forged by Freedom <onboarding@resend.dev>',
+      to: cleanTo,
+      subject: cleanSubject,
       html,
     }),
   })
