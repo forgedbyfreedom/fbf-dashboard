@@ -47,17 +47,32 @@ export default function IntakeOverview({ clients, intakes }: IntakeOverviewProps
     return true
   })
 
-  const handleGenerateLink = async (clientId: string) => {
+  const handleGenerateLink = async (clientId: string, sendEmail = true) => {
     setGeneratingLinks(prev => ({ ...prev, [clientId]: true }))
     try {
-      const res = await fetch('/api/intake/link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: clientId }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setGeneratedUrls(prev => ({ ...prev, [clientId]: data.intake_url }))
+      const client = clients.find(c => c.id === clientId)
+      if (sendEmail && client?.email) {
+        // Generate token AND send email
+        const res = await fetch('/api/admin/intakes/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: clientId, email: client.email }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          setGeneratedUrls(prev => ({ ...prev, [clientId]: data.onboarding_link }))
+        }
+      } else {
+        // Just generate link (no email)
+        const res = await fetch('/api/intake/link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: clientId }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          setGeneratedUrls(prev => ({ ...prev, [clientId]: data.intake_url }))
+        }
       }
     } catch (err) {
       console.error('Failed to generate intake link:', err)
