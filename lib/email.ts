@@ -10,37 +10,54 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailOptions) {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    console.warn('RESEND_API_KEY not configured — skipping email send')
-    return null
-  }
-
   const cleanTo = to.replace(/[\n\r\s]/g, '').trim()
   const cleanSubject = subject.replace(/[\n\r]/g, ' ').trim()
 
-  const res = await fetch('https://api.resend.com/emails', {
+  // Try Resend first if API key + domain are configured
+  const resendKey = process.env.RESEND_API_KEY
+  const resendDomain = process.env.RESEND_FROM_DOMAIN
+
+  if (resendKey && resendDomain) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `Forged by Freedom <coach@${resendDomain}>`,
+        to: cleanTo,
+        subject: cleanSubject,
+        html,
+      }),
+    })
+    const data = await res.json()
+    if (res.ok) return data
+    console.error('Resend error, falling back to SMTP:', data)
+  }
+
+  // Fall back to Render backend SMTP relay
+  const renderUrl = process.env.RENDER_API_URL || 'https://forged-by-freedom-api-nm4f.onrender.com'
+  const adminKey = process.env.ADMIN_KEY || ''
+
+  const res = await fetch(`${renderUrl}/api/send-email`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'Forged by Freedom <onboarding@resend.dev>',
+      key: adminKey,
       to: cleanTo,
       subject: cleanSubject,
       html,
     }),
   })
 
-  const data = await res.json()
-
   if (!res.ok) {
-    console.error('Resend error:', data)
-    throw new Error(`Email failed: ${data.message || JSON.stringify(data)}`)
+    const err = await res.text()
+    console.error('SMTP relay error:', err)
+    throw new Error(`Email failed: ${err}`)
   }
 
-  return data
+  return await res.json()
 }
 
 export function buildReportEmail(clientName: string, coachName: string, reportType: string, dateRange: string): string {
