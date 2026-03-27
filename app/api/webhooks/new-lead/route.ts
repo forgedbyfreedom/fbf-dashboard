@@ -69,8 +69,10 @@ export async function POST(request: NextRequest) {
 
       clientId = newClient.id
 
-      // Create metrics row
-      await supabase.from('client_metrics').insert({ client_id: clientId }).catch(() => {})
+      // Create metrics row (best effort)
+      try {
+        await supabase.from('client_metrics').insert({ client_id: clientId })
+      } catch { /* ignore if metrics row already exists */ }
     }
 
     // Generate intake token
