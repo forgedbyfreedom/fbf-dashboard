@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@eslint/eslintrc": "^3.3.4",
     "@react-pdf/renderer": "^4.3.2",
     "@supabase/ssr": "^0.6.1",
