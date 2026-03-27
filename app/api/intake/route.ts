@@ -94,6 +94,54 @@ export async function POST(request: NextRequest) {
         .from('intake_tokens')
         .update({ status: 'used', used_at: new Date().toISOString() })
         .eq('token_hash', tokenHash)
+
+      // Auto-save intake + waiver to Supabase Storage as JSON document
+      try {
+        const { data: clientInfo } = await supabase
+          .from('clients')
+          .select('first_name, last_name')
+          .eq('id', clientId)
+          .single()
+
+        const clientName = clientInfo
+          ? `${clientInfo.first_name}_${clientInfo.last_name}`.replace(/\s+/g, '_').toLowerCase()
+          : clientId
+
+        const dateStr = new Date().toISOString().split('T')[0]
+        const docPath = `intakes/${clientName}/${dateStr}_intake.json`
+        const waiverPath = `intakes/${clientName}/${dateStr}_waiver.json`
+
+        // Save full intake data
+        await supabase.storage
+          .from('client-documents')
+          .upload(docPath, Buffer.from(JSON.stringify({
+            client_id: clientId,
+            client_name: clientInfo ? `${clientInfo.first_name} ${clientInfo.last_name}` : 'Unknown',
+            submitted_at: new Date().toISOString(),
+            ...intakeData,
+          }, null, 2)), {
+            contentType: 'application/json',
+            upsert: true,
+          })
+
+        // Save waiver record separately
+        await supabase.storage
+          .from('client-documents')
+          .upload(waiverPath, Buffer.from(JSON.stringify({
+            client_id: clientId,
+            client_name: clientInfo ? `${clientInfo.first_name} ${clientInfo.last_name}` : 'Unknown',
+            waiver_accepted: true,
+            waiver_accepted_at: new Date().toISOString(),
+            waiver_ip: ip,
+            waiver_type: 'liability',
+          }, null, 2)), {
+            contentType: 'application/json',
+            upsert: true,
+          })
+      } catch (storageErr) {
+        // Don't fail the intake submission if storage fails
+        console.error('Failed to save intake to storage:', storageErr)
+      }
     }
 
     return NextResponse.json({ success: true })
