@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { generateProgram, IntakeData, ClientInfo } from '@/lib/program-generator'
+import type { IntakeData } from '@/lib/program-generator'
 import { sendEmail } from '@/lib/email'
 
 const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://fbf-dashboard.vercel.app'
@@ -102,112 +102,60 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create review record' }, { status: 500 })
     }
 
-    // Generate the program via Render backend (no timeout limit)
-    // Vercel serverless functions timeout at 10-60s, but Claude needs 30-90s
+    // Fire-and-forget: tell Render to generate the program asynchronously
+    // Vercel CANNOT wait for Claude (30-90s) — it will timeout.
+    // Render saves directly to the database when done, then ntfy notifies Bryan.
     try {
-      const intakeData = intakeRecord as unknown as IntakeData
       const renderUrl = process.env.RENDER_API_URL || 'https://forged-by-freedom-api-nm4f.onrender.com'
       const adminKey = process.env.ADMIN_KEY || ''
-
-      // First try: if intake exists in Render's client_intakes table, use Render's generator
-      const renderGenRes = await fetch(`${renderUrl}/api/intake/generate-program`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intake_id: intakeId, key: adminKey }),
-      })
-
-      let program: Record<string, unknown> | null = null
-
-      if (renderGenRes.ok) {
-        // Render generated it — pull the program from generated_programs table
-        const { data: genProgram } = await supabase
-          .from('generated_programs')
-          .select('*')
-          .eq('intake_id', intakeId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
-
-        if (genProgram) {
-          // Map Render's format to dashboard's format
-          program = {
-            program_name: `FBF Custom Program - ${client.first_name}`,
-            workout_program: genProgram.training_program,
-            meal_plan: genProgram.nutrition_plan,
-            cardio_protocol: genProgram.cardio_protocol,
-            current_supplements: genProgram.supplement_protocol,
-            current_peptides: genProgram.ped_protocol,
-            medical_protocol: genProgram.metabolic_monitoring,
-            program_raw_text: genProgram.methodology || '',
-            target_calories: genProgram.plan_at_a_glance?.daily_calories || null,
-            target_protein: genProgram.plan_at_a_glance?.daily_protein_g || null,
-            target_carbs: genProgram.plan_at_a_glance?.daily_carbs_g || null,
-            target_fats: genProgram.plan_at_a_glance?.daily_fat_g || null,
-            target_steps: genProgram.plan_at_a_glance?.daily_steps || 10000,
-            target_water_oz: genProgram.plan_at_a_glance?.daily_water_oz || 100,
-            weigh_in_day: 'monday',
-          }
-        }
-      }
-
-      // Fallback: generate directly on Vercel (may timeout but try anyway)
-      if (!program) {
-        const { generateProgram: genDirect } = await import('@/lib/program-generator')
-        const clientInfo = { first_name: client.first_name, last_name: client.last_name, email: client.email }
-        const result = await genDirect(intakeData as Parameters<typeof genDirect>[0], clientInfo)
-        program = result as unknown as Record<string, unknown>
-      }
-
-      // Store the generated program in the review record
-      await supabase
-        .from('program_reviews')
-        .update({
-          generated_program: program,
-          status: 'pending_review',
-          generated_at: new Date().toISOString(),
-        })
-        .eq('id', review.id)
-
-      // Update intake status
-      await supabase
-        .from('client_intake')
-        .update({ program_status: 'ready_for_review' })
-        .eq('id', intakeId)
-
-      // Send notification email to Bryan and Wendy
       const clientName = `${client.first_name} ${client.last_name}`
       const reviewUrl = `${DASHBOARD_URL}/program-review/${review.id}`
 
-      const emailHtml = buildNotificationEmail(clientName, intakeData, reviewUrl)
-
-      for (const adminEmail of ADMIN_EMAILS) {
-        try {
-          await sendEmail({
-            to: adminEmail,
-            subject: `New Program Ready for Review: ${clientName}`,
-            html: emailHtml,
-          })
-        } catch (emailErr) {
-          console.error(`Failed to send notification to ${adminEmail}:`, emailErr)
+      // Fire and forget — don't await the response
+      fetch(`${renderUrl}/api/intake/generate-program`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intake_id: intakeId,
+          key: adminKey,
+          review_id: review.id,
+          client_id: clientId,
+          client_name: clientName,
+        }),
+      }).then(async (res) => {
+        if (res.ok) {
+          console.log(`[PROGRAM] Render generation started for ${clientName}`)
+        } else {
+          console.error(`[PROGRAM] Render generation failed for ${clientName}: ${res.status}`)
         }
-      }
+      }).catch((err) => {
+        console.error(`[PROGRAM] Render call failed for ${clientName}:`, err)
+      })
 
-      // Send ntfy push notification
+      // Return immediately — don't wait for generation
+      // Render will update program_reviews and client_intake when done
+      // and send ntfy + email notifications
+
+      // Send ntfy that generation has started
       const ntfyTopic = process.env.NTFY_TOPIC || 'fbf-leads-bryan'
       await fetch(`https://ntfy.sh/${ntfyTopic}`, {
         method: 'POST',
         headers: {
-          Title: `📋 Program Ready for Review: ${clientName}`,
-          Priority: 'high',
-          Tags: 'clipboard,fire',
+          Title: `⏳ Program Generating: ${clientName}`,
+          Priority: 'default',
+          Tags: 'hourglass',
         },
-        body: `${clientName}'s AI-generated program is ready.\n\nReview: ${reviewUrl}`,
+        body: `AI is generating a custom program for ${clientName}.\nYou'll get another notification when it's ready for review.`,
       }).catch(() => {})
+
+      // Email notification will be sent by Render when generation completes
+      // Don't send "ready for review" here since it's still generating
 
       return NextResponse.json({
         success: true,
         review_id: review.id,
-        status: 'pending_review',
+        status: 'generating',
+        message: 'Program generation started on Render backend',
       })
     } catch (genError) {
       console.error('Program generation failed:', genError)
@@ -228,16 +176,16 @@ export async function POST(request: NextRequest) {
         .eq('id', intakeId)
 
       // Send ntfy error notification
-      const clientName = `${client.first_name} ${client.last_name}`
+      const errorClientName = `${client.first_name} ${client.last_name}`
       const ntfyTopic2 = process.env.NTFY_TOPIC || 'fbf-leads-bryan'
       await fetch(`https://ntfy.sh/${ntfyTopic2}`, {
         method: 'POST',
         headers: {
-          Title: `⚠️ Program Generation Failed: ${clientName}`,
+          Title: `⚠️ Program Generation Failed: ${errorClientName}`,
           Priority: 'urgent',
           Tags: 'warning',
         },
-        body: `Auto-program generation failed for ${clientName}. Error: ${genError instanceof Error ? genError.message : 'Unknown error'}\n\nGenerate manually: ${DASHBOARD_URL}/admin`,
+        body: `Auto-program generation failed for ${errorClientName}. Error: ${genError instanceof Error ? genError.message : 'Unknown error'}\n\nGenerate manually: ${DASHBOARD_URL}/admin`,
       }).catch(() => {})
 
       // Still notify admin about the error via email
@@ -245,8 +193,8 @@ export async function POST(request: NextRequest) {
         try {
           await sendEmail({
             to: adminEmail,
-            subject: `Program Generation FAILED: ${clientName}`,
-            html: buildErrorEmail(clientName, genError instanceof Error ? genError.message : 'Unknown error'),
+            subject: `Program Generation FAILED: ${errorClientName}`,
+            html: buildErrorEmail(errorClientName, genError instanceof Error ? genError.message : 'Unknown error'),
           })
         } catch { /* best effort */ }
       }
