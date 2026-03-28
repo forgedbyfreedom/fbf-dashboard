@@ -26,6 +26,7 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
       },
       body: JSON.stringify({
         from: `Forged by Freedom <coach@${resendDomain}>`,
+        reply_to: 'forgedbyfreedom@proton.me',
         to: cleanTo,
         subject: cleanSubject,
         html,

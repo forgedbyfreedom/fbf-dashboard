@@ -102,18 +102,61 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create review record' }, { status: 500 })
     }
 
-    // Generate the program via AI
+    // Generate the program via Render backend (no timeout limit)
+    // Vercel serverless functions timeout at 10-60s, but Claude needs 30-90s
     try {
-      // Pass the full intake record — the generator will extract what it needs
       const intakeData = intakeRecord as unknown as IntakeData
+      const renderUrl = process.env.RENDER_API_URL || 'https://forged-by-freedom-api-nm4f.onrender.com'
+      const adminKey = process.env.ADMIN_KEY || ''
 
-      const clientInfo: ClientInfo = {
-        first_name: client.first_name,
-        last_name: client.last_name,
-        email: client.email,
+      // First try: if intake exists in Render's client_intakes table, use Render's generator
+      const renderGenRes = await fetch(`${renderUrl}/api/intake/generate-program`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intake_id: intakeId, key: adminKey }),
+      })
+
+      let program: Record<string, unknown> | null = null
+
+      if (renderGenRes.ok) {
+        // Render generated it — pull the program from generated_programs table
+        const { data: genProgram } = await supabase
+          .from('generated_programs')
+          .select('*')
+          .eq('intake_id', intakeId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (genProgram) {
+          // Map Render's format to dashboard's format
+          program = {
+            program_name: `FBF Custom Program - ${client.first_name}`,
+            workout_program: genProgram.training_program,
+            meal_plan: genProgram.nutrition_plan,
+            cardio_protocol: genProgram.cardio_protocol,
+            current_supplements: genProgram.supplement_protocol,
+            current_peptides: genProgram.ped_protocol,
+            medical_protocol: genProgram.metabolic_monitoring,
+            program_raw_text: genProgram.methodology || '',
+            target_calories: genProgram.plan_at_a_glance?.daily_calories || null,
+            target_protein: genProgram.plan_at_a_glance?.daily_protein_g || null,
+            target_carbs: genProgram.plan_at_a_glance?.daily_carbs_g || null,
+            target_fats: genProgram.plan_at_a_glance?.daily_fat_g || null,
+            target_steps: genProgram.plan_at_a_glance?.daily_steps || 10000,
+            target_water_oz: genProgram.plan_at_a_glance?.daily_water_oz || 100,
+            weigh_in_day: 'monday',
+          }
+        }
       }
 
-      const program = await generateProgram(intakeData, clientInfo)
+      // Fallback: generate directly on Vercel (may timeout but try anyway)
+      if (!program) {
+        const { generateProgram: genDirect } = await import('@/lib/program-generator')
+        const clientInfo = { first_name: client.first_name, last_name: client.last_name, email: client.email }
+        const result = await genDirect(intakeData as Parameters<typeof genDirect>[0], clientInfo)
+        program = result as unknown as Record<string, unknown>
+      }
 
       // Store the generated program in the review record
       await supabase

@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS program_reviews (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_program_reviews_client ON program_reviews(client_id);
-CREATE INDEX idx_program_reviews_status ON program_reviews(status);
+CREATE INDEX IF NOT EXISTS idx_program_reviews_client ON program_reviews(client_id);
+CREATE INDEX IF NOT EXISTS idx_program_reviews_status ON program_reviews(status);
 
 -- Program Change Log — tracks who changed what on client program fields
 CREATE TABLE IF NOT EXISTS program_change_log (
@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS program_change_log (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_program_change_log_client ON program_change_log(client_id);
-CREATE INDEX idx_program_change_log_created ON program_change_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_program_change_log_client ON program_change_log(client_id);
+CREATE INDEX IF NOT EXISTS idx_program_change_log_created ON program_change_log(created_at DESC);
 
 -- Add program_status column to client_intake for pipeline tracking
 -- Values: null (not started), 'pending', 'generating', 'ready_for_review', 'approved', 'program_delivered'
@@ -44,11 +44,13 @@ ALTER TABLE client_intakes ADD COLUMN IF NOT EXISTS program_status text;
 ALTER TABLE program_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE program_change_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role full access on program_reviews" ON program_reviews;
 CREATE POLICY "Service role full access on program_reviews"
   ON program_reviews FOR ALL
   USING (true)
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role full access on program_change_log" ON program_change_log;
 CREATE POLICY "Service role full access on program_change_log"
   ON program_change_log FOR ALL
   USING (true)

@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
 
     const { data: dashIntakes } = await dashQuery
     for (const intake of dashIntakes || []) {
-      const client = (intake as any).clients
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = (intake as Record<string, unknown>).clients as Record<string, string> | null
       results.push({
         source: 'dashboard',
         id: intake.id,

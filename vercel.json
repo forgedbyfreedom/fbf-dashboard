@@ -31,6 +31,10 @@
     {
       "path": "/api/cron/check-intakes",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/keep-alive",
+      "schedule": "0 8 * * *"
     }
   ]
 }
