@@ -65,6 +65,27 @@ export async function POST(request: NextRequest) {
       // Skip if notifications explicitly disabled (default is ON)
       if (client?.chat_notifications === false) continue
 
+      // Check Do Not Disturb hours for coaches (org_members)
+      const { data: coachMember } = await supabase
+        .from('org_members')
+        .select('role, dnd_start, dnd_end')
+        .eq('user_id', member.user_id)
+        .maybeSingle()
+
+      if (coachMember?.dnd_start != null && coachMember?.dnd_end != null) {
+        const now = new Date()
+        const currentHour = now.getHours()
+        const dndStart = coachMember.dnd_start as number // e.g. 22 for 10 PM
+        const dndEnd = coachMember.dnd_end as number     // e.g. 7 for 7 AM
+
+        // Handle overnight DND (e.g. 22-7)
+        if (dndStart > dndEnd) {
+          if (currentHour >= dndStart || currentHour < dndEnd) continue
+        } else {
+          if (currentHour >= dndStart && currentHour < dndEnd) continue
+        }
+      }
+
       // Get push tokens — try by user_id first, then by client_id
       let tokens: Array<{ token: string }> = []
 

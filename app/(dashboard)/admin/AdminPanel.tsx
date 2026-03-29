@@ -23,9 +23,17 @@ interface Client {
   first_name: string
   last_name: string
   email: string | null
+  phone: string | null
   is_active: boolean
+  created_at: string
+  target_calories: number | null
+  workout_program: unknown[] | null
+  meal_plan: unknown[] | null
   client_coach_assignments: ClientAssignment[]
 }
+
+type SortKey = 'name' | 'email' | 'coach' | 'status' | 'program' | 'created'
+type SortDir = 'asc' | 'desc'
 
 interface AdminPanelProps {
   orgId: string
@@ -37,6 +45,52 @@ export default function AdminPanel({ orgId, coaches, clients: initialClients }: 
   const [clients, setClients] = useState(initialClients)
   const [assignModal, setAssignModal] = useState<{ clientId: string; clientName: string } | null>(null)
   const [inviteEmail, setInviteEmail] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('created')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const sortArrow = (key: SortKey) => {
+    if (sortKey !== key) return ' ↕'
+    return sortDir === 'asc' ? ' ↑' : ' ↓'
+  }
+
+  const getCoachName = (client: Client) => {
+    const a = client.client_coach_assignments.find(a => a.is_active)
+    return a?.profiles?.full_name || 'Unassigned'
+  }
+
+  const hasProgram = (client: Client) => {
+    return !!(client.workout_program && client.workout_program.length > 0) ||
+           !!(client.meal_plan && client.meal_plan.length > 0)
+  }
+
+  const sortedClients = [...clients].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1
+    switch (sortKey) {
+      case 'name':
+        return dir * (`${a.first_name} ${a.last_name}`).localeCompare(`${b.first_name} ${b.last_name}`)
+      case 'email':
+        return dir * (a.email || '').localeCompare(b.email || '')
+      case 'coach':
+        return dir * getCoachName(a).localeCompare(getCoachName(b))
+      case 'status':
+        return dir * (Number(b.is_active) - Number(a.is_active))
+      case 'program':
+        return dir * (Number(hasProgram(b)) - Number(hasProgram(a)))
+      case 'created':
+        return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      default:
+        return 0
+    }
+  })
 
   const coachClientCounts = coaches.reduce((acc, coach) => {
     acc[coach.user_id] = clients.filter(c =>
@@ -151,37 +205,101 @@ export default function AdminPanel({ orgId, coaches, clients: initialClients }: 
         <div className="p-4 border-b border-[#2a2a2a]">
           <h3 className="text-sm font-semibold text-[#888] uppercase tracking-wider">All Clients ({clients.length})</h3>
         </div>
-        <div className="divide-y divide-[#2a2a2a]">
-          {clients.map(client => {
-            const activeAssignment = client.client_coach_assignments.find(a => a.is_active)
-            return (
-              <div key={client.id} className="px-4 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-white">
-                    {client.first_name} {client.last_name}
-                    {!client.is_active && <Badge variant="red" className="ml-2">Inactive</Badge>}
-                  </p>
-                  <p className="text-xs text-[#555]">
-                    Coach: {activeAssignment?.profiles?.full_name || 'Unassigned'}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setAssignModal({ clientId: client.id, clientName: `${client.first_name} ${client.last_name}` })}
-                  >
-                    Reassign
-                  </Button>
-                  {client.is_active && (
-                    <Button size="sm" variant="ghost" onClick={() => handleDeactivate(client.id)}>
-                      Deactivate
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#2a2a2a]">
+                <th
+                  className="text-left px-4 py-3 text-xs font-semibold text-[#888] uppercase tracking-wider cursor-pointer hover:text-[#FF6A00] transition-colors select-none"
+                  onClick={() => handleSort('name')}
+                >
+                  Name{sortArrow('name')}
+                </th>
+                <th
+                  className="text-left px-4 py-3 text-xs font-semibold text-[#888] uppercase tracking-wider cursor-pointer hover:text-[#FF6A00] transition-colors select-none"
+                  onClick={() => handleSort('email')}
+                >
+                  Email{sortArrow('email')}
+                </th>
+                <th
+                  className="text-left px-4 py-3 text-xs font-semibold text-[#888] uppercase tracking-wider cursor-pointer hover:text-[#FF6A00] transition-colors select-none"
+                  onClick={() => handleSort('coach')}
+                >
+                  Coach{sortArrow('coach')}
+                </th>
+                <th
+                  className="text-left px-4 py-3 text-xs font-semibold text-[#888] uppercase tracking-wider cursor-pointer hover:text-[#FF6A00] transition-colors select-none"
+                  onClick={() => handleSort('program')}
+                >
+                  Program{sortArrow('program')}
+                </th>
+                <th
+                  className="text-left px-4 py-3 text-xs font-semibold text-[#888] uppercase tracking-wider cursor-pointer hover:text-[#FF6A00] transition-colors select-none"
+                  onClick={() => handleSort('status')}
+                >
+                  Status{sortArrow('status')}
+                </th>
+                <th
+                  className="text-left px-4 py-3 text-xs font-semibold text-[#888] uppercase tracking-wider cursor-pointer hover:text-[#FF6A00] transition-colors select-none"
+                  onClick={() => handleSort('created')}
+                >
+                  Created{sortArrow('created')}
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-[#888] uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1a1a1a]">
+              {sortedClients.map(client => (
+                <tr key={client.id} className="hover:bg-[#141414] transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="text-white font-medium">{client.first_name} {client.last_name}</p>
+                    {client.phone && <p className="text-xs text-[#555]">{client.phone}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-[#888]">{client.email || '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className={getCoachName(client) === 'Unassigned' ? 'text-[#555]' : 'text-[#FF6A00]'}>
+                      {getCoachName(client)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {hasProgram(client) ? (
+                      <Badge variant="green">Active</Badge>
+                    ) : (
+                      <Badge variant="muted">None</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {client.is_active ? (
+                      <Badge variant="green">Active</Badge>
+                    ) : (
+                      <Badge variant="red">Inactive</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-[#555] text-xs">
+                    {new Date(client.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setAssignModal({ clientId: client.id, clientName: `${client.first_name} ${client.last_name}` })}
+                      >
+                        Reassign
+                      </Button>
+                      {client.is_active && (
+                        <Button size="sm" variant="ghost" onClick={() => handleDeactivate(client.id)}>
+                          Deactivate
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Card>
 

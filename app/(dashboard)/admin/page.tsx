@@ -34,7 +34,7 @@ export default async function AdminPage() {
   // Get all clients in org
   const { data: clients } = await supabase
     .from('clients')
-    .select('*, client_coach_assignments(coach_user_id, is_active, profiles(full_name))')
+    .select('*, client_coach_assignments(coach_user_id, is_active, profiles(full_name)), phone, created_at, target_calories, workout_program, meal_plan')
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })
 

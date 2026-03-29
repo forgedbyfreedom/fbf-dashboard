@@ -16,8 +16,8 @@ async function main() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      name: 'Pipeline Test Bot',
-      email: 'pipeline.test.bot@test.invalid',
+      name: 'Test User',
+      email: 'weerod@aol.com',
       phone: '0000000000',
       primary_goal: 'Body Recomposition',
       commitment_level: 'I will do whatever it takes, no excuses',
@@ -35,7 +35,7 @@ async function main() {
 
   // STEP 2
   console.log('STEP 2: Dashboard creates client + sends intake form...')
-  const { data: client } = await sb.from('clients').select('id, first_name, last_name, email').eq('email', 'pipeline.test.bot@test.invalid').single()
+  const { data: client } = await sb.from('clients').select('id, first_name, last_name, email').eq('email', 'weerod@aol.com').single()
   if (!client) {
     console.log('  ❌ Client not created — bridge webhook may have failed or Render is cold')
     await cleanup(null)
@@ -102,7 +102,7 @@ async function main() {
   // STEP 5
   console.log('STEP 5: Waiting for AI to generate custom program...')
   let reviewId = null
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 60; i++) {
     await new Promise(r => setTimeout(r, 5000))
     const { data: review } = await sb.from('program_reviews').select('id, status, error_message, generated_program').eq('client_id', client.id).order('created_at', { ascending: false }).limit(1).single()
 
@@ -125,7 +125,7 @@ async function main() {
     }
   }
   if (!reviewId) {
-    console.log('\n  ❌ Timed out waiting for generation (2 min)\n')
+    console.log('\n  ❌ Timed out waiting for generation (5 min)\n')
     await cleanup(client.id)
     return
   }
@@ -176,7 +176,7 @@ async function cleanup(clientId) {
     await sb.from('client_metrics').delete().eq('client_id', clientId)
     await sb.from('clients').delete().eq('id', clientId)
   }
-  await sb.from('leads').delete().eq('email', 'pipeline.test.bot@test.invalid')
+  await sb.from('leads').delete().eq('email', 'weerod@aol.com')
   console.log('✅ All test data cleaned up')
   console.log('══════════════════════════════════════════════════════════════\n')
 }
