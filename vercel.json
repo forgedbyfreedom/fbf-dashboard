@@ -34,7 +34,7 @@
     },
     {
       "path": "/api/cron/keep-alive",
-      "schedule": "0 8 * * *"
+      "schedule": "*/14 * * * *"
     },
     {
       "path": "/api/cron/ai-coach-digest",
