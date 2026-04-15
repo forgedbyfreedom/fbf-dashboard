@@ -291,7 +291,7 @@ export default function UserManagement() {
           action: 'send_invite',
           email: user.email,
           name: user.client_name || '',
-          password: invitePassword || 'Forged1',
+          password: invitePassword || 'DISCIPLINE',
         }),
       })
       const data = await res.json()
@@ -478,7 +478,7 @@ export default function UserManagement() {
               type="text"
               value={invitePassword}
               onChange={e => setInvitePassword(e.target.value)}
-              placeholder="Default: Forged1"
+              placeholder="Default: DISCIPLINE"
             />
             <p className="text-xs text-[#555] mt-2 mb-4">
               The email will include the portal link, their email, and this password.
@@ -742,7 +742,7 @@ export default function UserManagement() {
                 type="password"
                 value={formPassword}
                 onChange={e => setFormPassword(e.target.value)}
-                placeholder="Leave blank for default (Forged1)"
+                placeholder="Leave blank for default (DISCIPLINE)"
               />
             </div>
             <p className="text-xs text-[#555] mt-3">

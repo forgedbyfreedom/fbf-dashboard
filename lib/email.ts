@@ -13,20 +13,38 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
   const cleanTo = to.replace(/[\n\r\s]/g, '').trim()
   const cleanSubject = subject.replace(/[\n\r]/g, ' ').trim()
 
-  // Try Resend first if API key + domain are configured
-  const resendKey = process.env.RESEND_API_KEY
+  // Primary: Gmail SMTP via nodemailer
+  const gmailUser = process.env.GMAIL_FROM
+  const gmailPass = process.env.GMAIL_APP_PASSWORD
+
+  if (gmailUser && gmailPass) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Gmail-SMTP': '1' },
+    }).catch(() => null)
+    // Use Render SMTP relay which has nodemailer configured with Gmail
+    const renderUrl = process.env.RENDER_API_URL || 'https://forged-by-freedom-api-nm4f.onrender.com'
+    const adminKey = process.env.ADMIN_KEY || ''
+    const smtpRes = await fetch(`${renderUrl}/api/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: adminKey, to: cleanTo, subject: cleanSubject, html }),
+    })
+    if (smtpRes.ok) return await smtpRes.json()
+    console.error('Gmail SMTP relay error:', await smtpRes.text())
+  }
+
+  // Fallback: Resend with verified FBF domain
+  const resendKey = process.env.RESEND_FBF
   const resendDomain = process.env.RESEND_FROM_DOMAIN
 
   if (resendKey && resendDomain) {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: `Forged by Freedom <coach@${resendDomain}>`,
-        reply_to: 'forgedbyfreedom@proton.me',
+        reply_to: 'forgedbyfreedom@gmail.com',
         to: cleanTo,
         subject: cleanSubject,
         html,
@@ -34,31 +52,10 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
     })
     const data = await res.json()
     if (res.ok) return data
-    console.error('Resend error, falling back to SMTP:', data)
+    console.error('Resend fallback error:', data)
   }
 
-  // Fall back to Render backend SMTP relay
-  const renderUrl = process.env.RENDER_API_URL || 'https://forged-by-freedom-api-nm4f.onrender.com'
-  const adminKey = process.env.ADMIN_KEY || ''
-
-  const res = await fetch(`${renderUrl}/api/send-email`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      key: adminKey,
-      to: cleanTo,
-      subject: cleanSubject,
-      html,
-    }),
-  })
-
-  if (!res.ok) {
-    const err = await res.text()
-    console.error('SMTP relay error:', err)
-    throw new Error(`Email failed: ${err}`)
-  }
-
-  return await res.json()
+  throw new Error('All email methods failed — check GMAIL_APP_PASSWORD and RESEND_FBF env vars')
 }
 
 export function buildReportEmail(clientName: string, coachName: string, reportType: string, dateRange: string): string {

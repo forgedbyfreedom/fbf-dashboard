@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     if (email) {
       const { data: authUser, error: authError } = await adminSupabase.auth.admin.createUser({
         email,
-        password: 'Forged1',
+        password: 'DISCIPLINE',
         email_confirm: true,
         user_metadata: { full_name: `${first_name} ${last_name}` },
       })
@@ -99,9 +99,15 @@ export async function POST(request: NextRequest) {
         const existing = users?.find(u => u.email === email)
         if (existing) {
           authUserId = existing.id
+        } else {
+          // Auth creation failed and no existing user found — block the request.
+          // A client record without a login is unusable and will be invisible to the coach.
+          console.error('[admin/clients] Auth account creation failed:', authError.message, { email })
+          return NextResponse.json(
+            { error: `Failed to create login for ${email}: ${authError.message}` },
+            { status: 500 }
+          )
         }
-        // If user doesn't exist and creation failed, log but continue
-        // (client can still be created without an auth account)
       } else {
         authUserId = authUser.user.id
       }

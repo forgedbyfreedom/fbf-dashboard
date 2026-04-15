@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         // Create auth user
         const { data: newUser, error } = await adminSupabase.auth.admin.createUser({
           email,
-          password: password || 'Forged1',
+          password: password || 'DISCIPLINE',
           email_confirm: true,
           user_metadata: { full_name: `${first_name || ''} ${last_name || ''}`.trim() }
         })
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Send welcome email with credentials
-        const tempPassword = password || 'Forged1'
+        const tempPassword = password || 'DISCIPLINE'
         const clientName = `${first_name || ''} ${last_name || ''}`.trim()
         try {
           await sendEmail({

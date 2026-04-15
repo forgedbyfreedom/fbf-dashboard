@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
         const { email, name, password } = body
         if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
 
-        const html = buildWelcomeEmail(name || '', email, password || 'Forged1')
+        const html = buildWelcomeEmail(name || '', email, password || 'DISCIPLINE')
         await sendEmail({
           to: email,
           subject: 'Welcome to Forged by Freedom — Your Login Credentials',
