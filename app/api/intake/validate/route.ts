@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Check if intake already exists
     const { data: existingIntake } = await supabase
-      .from('client_intake')
+      .from('client_intakes')
       .select('id, completed_at')
       .eq('client_id', link.clients.id)
       .single()

@@ -5,6 +5,7 @@ import { generateReportData } from '@/lib/reports/generate'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { ReportPDF } from '@/lib/reports/pdf-template'
 import { sendEmail, buildReportEmail } from '@/lib/email'
+import { uploadAndArchive } from '@/lib/upload-and-archive'
 import React from 'react'
 
 export async function GET(request: NextRequest) {
@@ -71,19 +72,32 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pdfBuffer = await renderToBuffer(React.createElement(ReportPDF, { data: reportData }) as any)
 
-    // Upload PDF to storage
+    // Upload PDF to storage + record in archive_objects per phase_2B Priority 3.
     const adminSupabase = createAdminClient()
     const fileName = `${client_id}/${report_type}-${reportData.endDate}.pdf`
 
-    const { error: uploadError } = await adminSupabase.storage
-      .from('reports')
-      .upload(fileName, pdfBuffer, {
+    let uploadFailed = false
+    try {
+      await uploadAndArchive({
+        supabase: adminSupabase,
+        bucket: 'reports',
+        path: fileName,
+        fileBuffer: Buffer.from(pdfBuffer),
         contentType: 'application/pdf',
+        sizeBytes: pdfBuffer.byteLength,
+        originalName: `${report_type}-${reportData.endDate}.pdf`,
+        stage: 'other',
+        clientId: client_id,
+        archivedBy: user.id,
         upsert: true,
       })
+    } catch (uploadErr) {
+      console.error('Report upload/archive error:', uploadErr)
+      uploadFailed = true
+    }
 
     let pdfUrl: string | null = null
-    if (!uploadError) {
+    if (!uploadFailed) {
       const { data: signedData } = await adminSupabase.storage
         .from('reports')
         .createSignedUrl(fileName, 60 * 60 * 24 * 30) // 30 days

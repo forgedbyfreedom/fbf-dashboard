@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Upsert the intake record (one per client)
     const { error: upsertError } = await supabase
-      .from('client_intake')
+      .from('client_intakes')
       .upsert(intakeRecord, { onConflict: 'client_id' })
 
     if (upsertError) {
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient()
 
     const { data: intake, error } = await supabase
-      .from('client_intake')
+      .from('client_intakes')
       .select('*')
       .eq('client_id', clientId)
       .single()

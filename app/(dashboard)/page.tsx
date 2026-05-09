@@ -39,7 +39,7 @@ export default async function DashboardHome() {
     const adminSupabase = createAdminClient()
     const clientIds = metrics.map((m: { client_id: string }) => m.client_id)
     const { data: intakes } = await adminSupabase
-      .from('client_intake')
+      .from('client_intakes')
       .select('client_id, completed_at, waiver_accepted')
       .in('client_id', clientIds)
 

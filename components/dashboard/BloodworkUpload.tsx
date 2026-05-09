@@ -83,6 +83,7 @@ export default function BloodworkUpload({ clientId, clientName }: BloodworkUploa
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('stage', 'bloodwork')
 
       const uploadRes = await fetch(`/api/clients/${clientId}/documents`, {
         method: 'POST',

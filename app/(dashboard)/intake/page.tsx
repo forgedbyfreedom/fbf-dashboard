@@ -53,7 +53,7 @@ export default async function IntakePage() {
 
   if (clientIds.length > 0) {
     const { data: intakeData } = await supabase
-      .from('client_intake')
+      .from('client_intakes')
       .select('client_id, completed_at, created_at')
       .in('client_id', clientIds)
 

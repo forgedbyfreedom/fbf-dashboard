@@ -58,6 +58,7 @@ export default function ScanUpload({ clientId, onScanSaved }: ScanUploadProps) {
       // Upload file
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('stage', 'body_scan')
 
       const uploadRes = await fetch(`/api/clients/${clientId}/documents`, {
         method: 'POST',
