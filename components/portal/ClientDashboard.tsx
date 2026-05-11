@@ -8,6 +8,77 @@ import Tabs from '@/components/ui/Tabs'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 
+// Normalize meal_plan across the 3 shapes produced by the AI generator + legacy seed:
+//   nested:  [{ day, meals: [{ name, ingredients: [{name}], protein_g, ... }] }]
+//   flat:    [{ id, name, type, ingredients: [{name}], protein_g, ... }, ...]
+//   legacy:  [{ meal, description }, ...]
+type MealRow = { heading: string; body: string; macros?: string }
+
+function formatMacros(m: Record<string, unknown>): string {
+  const n = (v: unknown) => (v == null ? null : Number(v))
+  const cal = n(m.calories)
+  const p = n(m.protein_g)
+  const c = n(m.carbs_g)
+  const f = n(m.fat_g)
+  const parts: string[] = []
+  if (cal != null && !Number.isNaN(cal)) parts.push(`${cal} kcal`)
+  if (p != null && !Number.isNaN(p)) parts.push(`${p}P`)
+  if (c != null && !Number.isNaN(c)) parts.push(`${c}C`)
+  if (f != null && !Number.isNaN(f)) parts.push(`${f}F`)
+  return parts.join(' · ')
+}
+
+function ingredientsToText(ings: unknown): string {
+  if (!Array.isArray(ings)) return ''
+  return ings
+    .map((i) => (i && typeof i === 'object' && 'name' in i ? String((i as { name: unknown }).name || '') : ''))
+    .filter(Boolean)
+    .join('; ')
+}
+
+function normalizeMealPlan(plan: unknown): MealRow[] {
+  if (!Array.isArray(plan)) return []
+  const out: MealRow[] = []
+  for (const entry of plan) {
+    if (!entry || typeof entry !== 'object') continue
+    const e = entry as Record<string, unknown>
+
+    // Nested shape: { day, meals: [...] }
+    if (Array.isArray(e.meals)) {
+      const day = e.day ? String(e.day) : ''
+      for (const m of e.meals as Array<Record<string, unknown>>) {
+        const name = String(m.name || '')
+        const body = ingredientsToText(m.ingredients) || String(m.description || '')
+        out.push({
+          heading: day && day !== 'Daily' ? `${day} — ${name}` : name,
+          body,
+          macros: formatMacros(m) || undefined,
+        })
+      }
+      continue
+    }
+
+    // Flat meal shape: { name, ingredients, ... }
+    if (Array.isArray(e.ingredients) || e.name != null) {
+      out.push({
+        heading: String(e.name || ''),
+        body: ingredientsToText(e.ingredients) || String(e.description || ''),
+        macros: formatMacros(e) || undefined,
+      })
+      continue
+    }
+
+    // Legacy seed shape: { meal, description }
+    if ('meal' in e || 'description' in e) {
+      out.push({
+        heading: String(e.meal || ''),
+        body: String(e.description || ''),
+      })
+    }
+  }
+  return out
+}
+
 interface Report {
   id: string
   report_type: string
@@ -30,7 +101,7 @@ interface ClientDashboardProps {
     program_name?: string | null
     workout_program?: Array<{ day: string; exercises: Array<{ name: string; sets: string; reps: string }> }>
     cardio_protocol?: Array<{ phase: string; duration: string; frequency: string; notes: string }>
-    meal_plan?: Array<{ meal: string; description: string }>
+    meal_plan?: unknown
     current_supplements?: Array<{ [key: string]: string }>
   }
   checkins: Array<{
@@ -452,19 +523,26 @@ export default function ClientDashboard({ client, checkins, metrics, streak, coa
                 )}
 
                 {/* Meal Plan */}
-                {client.meal_plan && client.meal_plan.length > 0 && (
-                  <Card>
-                    <h3 className="text-sm font-semibold text-[#888] mb-4">Meal Plan</h3>
-                    <div className="space-y-3">
-                      {client.meal_plan.map((meal, i) => (
-                        <div key={i} className="border-b border-[#1a1a1a] pb-2 last:border-0">
-                          <p className="text-sm font-semibold text-[#D4A017]">{meal.meal}</p>
-                          <p className="text-sm text-[#ccc]">{meal.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                )}
+                {(() => {
+                  const mealRows = normalizeMealPlan(client.meal_plan)
+                  if (mealRows.length === 0) return null
+                  return (
+                    <Card>
+                      <h3 className="text-sm font-semibold text-[#888] mb-4">Meal Plan</h3>
+                      <div className="space-y-3">
+                        {mealRows.map((row, i) => (
+                          <div key={i} className="border-b border-[#1a1a1a] pb-2 last:border-0">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <p className="text-sm font-semibold text-[#D4A017]">{row.heading}</p>
+                              {row.macros && <p className="text-xs text-[#666] whitespace-nowrap">{row.macros}</p>}
+                            </div>
+                            {row.body && <p className="text-sm text-[#ccc] mt-1">{row.body}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )
+                })()}
 
                 {/* Disclaimer */}
                 <div className="bg-[#FF6A00]/5 border border-[#FF6A00]/20 rounded-lg p-3 mb-4">
@@ -488,7 +566,7 @@ export default function ClientDashboard({ client, checkins, metrics, streak, coa
                   </Card>
                 )}
 
-                {!client.workout_program?.length && !client.cardio_protocol?.length && !client.meal_plan?.length && (
+                {!client.workout_program?.length && !client.cardio_protocol?.length && normalizeMealPlan(client.meal_plan).length === 0 && (
                   <Card>
                     <p className="text-sm text-[#555] text-center py-6">
                       Your coach hasn&apos;t assigned a program yet. Check back soon!
