@@ -76,7 +76,7 @@ function IntakeTab({ clientId, clientEmail, clientName }: { clientId: string; cl
     )
   }
 
-  const waiverSigned = !!(intake.waiver_signature)
+  const waiverSigned = !!(intake.waiver_signature || intake.waiver_accepted)
   const sections = [
     { title: 'Personal Information', fields: ['full_name', 'dob', 'gender', 'location', 'emergency_contact', 'physician'] },
     { title: 'Health History', fields: ['health_conditions', 'medications', 'surgeries_injuries', 'physical_limitations', 'tobacco_use', 'alcohol_use'] },
@@ -97,11 +97,25 @@ function IntakeTab({ clientId, clientEmail, clientName }: { clientId: string; cl
             {waiverSigned ? 'Waiver Signed' : 'Waiver NOT Signed'}
           </span>
         </div>
-        {waiverSigned && (
+        {waiverSigned ? (
           <div className="text-sm space-y-1 text-[#888]">
-            <p>Signature: <span className="text-white italic">{String(intake.waiver_signature)}</span></p>
+            <p>Signature: <span className="text-white italic">{String(intake.waiver_signature || intake.waiver_accepted ? 'Accepted' : '—')}</span></p>
             <p>Initials: <span className="text-white">{String(intake.waiver_initials || '—')}</span></p>
-            <p>Signed: <span className="text-white">{intake.waiver_signed_date ? new Date(String(intake.waiver_signed_date)).toLocaleDateString() : '—'}</span></p>
+            <p>Signed: <span className="text-white">{(intake.waiver_signed_date || intake.waiver_accepted_at) ? new Date(String(intake.waiver_signed_date || intake.waiver_accepted_at)).toLocaleDateString() : '—'}</span></p>
+          </div>
+        ) : (
+          <div className="mt-3">
+            {sent ? (
+              <p className="text-green-400 text-sm">Onboarding form sent to {clientEmail}</p>
+            ) : (
+              <button
+                onClick={sendOnboarding}
+                disabled={sending || !clientEmail}
+                className="px-4 py-2 bg-[#FF6A00] text-white text-sm font-semibold rounded-lg hover:bg-[#e55f00] disabled:opacity-50"
+              >
+                {sending ? 'Sending...' : 'Send Onboarding Form'}
+              </button>
+            )}
           </div>
         )}
       </Card>

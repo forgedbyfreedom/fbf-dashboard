@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Single client detail mode
     if (clientId) {
       const { data: intake } = await adminSupabase
-        .from('client_intake')
+        .from('client_intakes')
         .select('*')
         .eq('client_id', clientId)
         .single()
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Get all intake records for these clients
     const clientIds = clients.map(c => c.id)
     const { data: intakes } = await adminSupabase
-      .from('client_intake')
+      .from('client_intakes')
       .select('client_id, completed_at, waiver_accepted, waiver_accepted_at, waiver_ip, id, created_at')
       .in('client_id', clientIds)
 

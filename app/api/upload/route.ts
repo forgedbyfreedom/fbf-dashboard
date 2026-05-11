@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { uploadAndArchive } from '@/lib/upload-and-archive'
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,19 +45,24 @@ export async function POST(request: NextRequest) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const filePath = `checkin-files/${clientId}/${today}_${safeName}`
 
-    // Upload file
+    // Upload file (and record in archive_objects per phase_2B Priority 3)
     const arrayBuffer = await file.arrayBuffer()
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, arrayBuffer, {
+    const buffer = Buffer.from(arrayBuffer)
+    try {
+      await uploadAndArchive({
+        supabase,
+        bucket: 'avatars',
+        path: filePath,
+        fileBuffer: buffer,
         contentType: file.type,
+        sizeBytes: buffer.byteLength,
+        originalName: file.name,
+        stage: 'progress_photo',
+        clientId,
         upsert: true,
       })
-
-    if (uploadError) {
-      // Try creating a general bucket if avatars doesn't support this path
-      // Fall back to using the files table with a data URL approach
-      console.error('Upload error:', uploadError)
+    } catch (err) {
+      console.error('Upload error:', err)
       return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
     }
 

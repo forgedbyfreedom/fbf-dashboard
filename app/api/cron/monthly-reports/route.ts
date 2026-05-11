@@ -4,6 +4,7 @@ import { generateReportData } from '@/lib/reports/generate'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { ReportPDF } from '@/lib/reports/pdf-template'
 import { sendEmail, buildReportEmail } from '@/lib/email'
+import { uploadAndArchive } from '@/lib/upload-and-archive'
 import React from 'react'
 
 export async function GET(request: NextRequest) {
@@ -35,14 +36,20 @@ export async function GET(request: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pdfBuffer = await renderToBuffer(React.createElement(ReportPDF, { data: reportData }) as any)
 
-      // Upload
+      // Upload + record in archive_objects per phase_2B Priority 3.
       const fileName = `${client.id}/monthly-${reportData.endDate}.pdf`
-      await adminSupabase.storage
-        .from('reports')
-        .upload(fileName, pdfBuffer, {
-          contentType: 'application/pdf',
-          upsert: true,
-        })
+      await uploadAndArchive({
+        supabase: adminSupabase,
+        bucket: 'reports',
+        path: fileName,
+        fileBuffer: Buffer.from(pdfBuffer),
+        contentType: 'application/pdf',
+        sizeBytes: pdfBuffer.byteLength,
+        originalName: `monthly-${reportData.endDate}.pdf`,
+        stage: 'other',
+        clientId: client.id,
+        upsert: true,
+      })
 
       const { data: signedData } = await adminSupabase.storage
         .from('reports')

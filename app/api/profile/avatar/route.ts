@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { uploadAndArchive } from '@/lib/upload-and-archive'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,17 +30,25 @@ export async function POST(request: NextRequest) {
 
     const adminSupabase = createAdminClient()
 
-    // Upload to avatars bucket (upsert)
+    // Upload to avatars bucket (upsert) + record in archive_objects per phase_2B Priority 3.
+    // Profile avatars are user-scoped (no client_id) — archived under stage 'other'.
     const arrayBuffer = await file.arrayBuffer()
-    const { error: uploadError } = await adminSupabase.storage
-      .from('avatars')
-      .upload(filePath, arrayBuffer, {
+    const buffer = Buffer.from(arrayBuffer)
+    try {
+      await uploadAndArchive({
+        supabase: adminSupabase,
+        bucket: 'avatars',
+        path: filePath,
+        fileBuffer: buffer,
         contentType: file.type,
+        sizeBytes: buffer.byteLength,
+        originalName: file.name,
+        stage: 'other',
+        archivedBy: user.id,
         upsert: true,
       })
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError)
+    } catch (err) {
+      console.error('Upload error:', err)
       return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
     }
 
