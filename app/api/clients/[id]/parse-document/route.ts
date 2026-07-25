@@ -3,6 +3,9 @@ import { getUserFromRequest, authorizeClientAccess } from '@/lib/auth-check'
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
+export const runtime = 'nodejs'
+export const maxDuration = 120
+
 const PROGRAM_SYSTEM_PROMPT = `You are a fitness program parser for Forged by Freedom coaching. Extract structured data from workout/nutrition documents.
 
 Return ONLY valid JSON with this exact structure (omit empty arrays, use null for missing values):
@@ -75,34 +78,52 @@ async function anthropicVisionRequest(
     throw new Error('ANTHROPIC_API_KEY is not configured')
   }
 
-  // Determine media type from URL
-  let mediaType = 'image/png'
-  if (imageUrl.match(/\.jpe?g/i)) mediaType = 'image/jpeg'
-  else if (imageUrl.match(/\.webp/i)) mediaType = 'image/webp'
-  else if (imageUrl.match(/\.gif/i)) mediaType = 'image/gif'
-  else if (imageUrl.match(/\.pdf/i)) mediaType = 'application/pdf'
+  // Always download first. Anthropic's servers cannot fetch Supabase signed
+  // URLs, and the old "guess the type from the URL string" logic broke on
+  // signed URLs (the ?token=... query string) and on any file whose extension
+  // did not match its real content.
+  const fileRes = await fetch(imageUrl)
+  if (!fileRes.ok) {
+    throw new Error(`Could not download the uploaded file for reading (HTTP ${fileRes.status})`)
+  }
+  const buffer = Buffer.from(await fileRes.arrayBuffer())
+  if (buffer.length === 0) {
+    throw new Error('The uploaded file is empty (0 bytes)')
+  }
+  const base64 = buffer.toString('base64')
+
+  // Sniff the real type from magic bytes, then fall back to the served
+  // Content-Type, then to the URL path.
+  const headerType = (fileRes.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+  let mediaType: string
+  if (buffer.subarray(0, 4).toString('latin1') === '%PDF') mediaType = 'application/pdf'
+  else if (buffer[0] === 0xff && buffer[1] === 0xd8) mediaType = 'image/jpeg'
+  else if (buffer.subarray(1, 4).toString('latin1') === 'PNG') mediaType = 'image/png'
+  else if (buffer.subarray(8, 12).toString('latin1') === 'WEBP') mediaType = 'image/webp'
+  else if (buffer.subarray(0, 3).toString('latin1') === 'GIF') mediaType = 'image/gif'
+  else if (headerType === 'application/pdf' || headerType.startsWith('image/')) mediaType = headerType
+  else if (/\.pdf(\?|$)/i.test(imageUrl)) mediaType = 'application/pdf'
+  else if (/\.jpe?g(\?|$)/i.test(imageUrl)) mediaType = 'image/jpeg'
+  else if (/\.webp(\?|$)/i.test(imageUrl)) mediaType = 'image/webp'
+  else if (/\.gif(\?|$)/i.test(imageUrl)) mediaType = 'image/gif'
+  else mediaType = 'image/png'
 
   const isPdf = mediaType === 'application/pdf'
 
-  // Download the image/PDF and convert to base64 (Supabase signed URLs
-  // can't be fetched by Anthropic's servers directly)
   let content
   if (isPdf) {
-    // PDFs: try URL first, fall back to base64
     content = [
       {
         type: 'document' as const,
-        source: { type: 'url' as const, url: imageUrl },
+        source: {
+          type: 'base64' as const,
+          media_type: 'application/pdf' as const,
+          data: base64,
+        },
       },
       { type: 'text' as const, text: userPrompt },
     ]
   } else {
-    // Images: download and send as base64
-    const imgRes = await fetch(imageUrl)
-    if (!imgRes.ok) throw new Error(`Failed to download image: ${imgRes.status}`)
-    const buffer = await imgRes.arrayBuffer()
-    const base64 = Buffer.from(buffer).toString('base64')
-
     content = [
       {
         type: 'image' as const,
@@ -222,8 +243,17 @@ export async function POST(
 
     let parsedJson: string
 
-    // If we have a file URL, use Anthropic Vision API directly for extraction + parsing
-    if (file_url && (file_type?.startsWith('image/') || file_type === 'application/pdf')) {
+    // If we have a file URL, use Anthropic Vision for extraction + parsing.
+    // The real media type is sniffed from the downloaded bytes inside
+    // anthropicVisionRequest, so a missing or wrong file_type from the client
+    // is no longer a reason to reject the document.
+    const looksBinary =
+      !file_type ||
+      file_type.startsWith('image/') ||
+      file_type === 'application/pdf' ||
+      file_type === 'application/octet-stream'
+
+    if (file_url && looksBinary) {
       parsedJson = await anthropicVisionRequest(
         systemPrompt,
         extractionPrompt,
@@ -263,7 +293,10 @@ export async function POST(
       raw_text: parsedJson,
     })
   } catch (err) {
-    console.error('Parse document error:', err)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    console.error('[PARSE-DOCUMENT] fatal:', err)
+    const message = err instanceof Error ? err.message : 'Server error'
+    // Strip anything that could leak the key, keep the actionable part.
+    const safe = message.replace(/sk-[A-Za-z0-9_-]+/g, '[redacted]')
+    return NextResponse.json({ error: safe }, { status: 500 })
   }
 }
