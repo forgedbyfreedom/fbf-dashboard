@@ -101,7 +101,10 @@ export async function POST(
       stage,
     })
   } catch (err) {
-    console.error('Document upload error:', err)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    console.error('[DOCUMENTS] upload fatal:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Server error' },
+      { status: 500 },
+    )
   }
 }

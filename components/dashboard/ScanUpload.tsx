@@ -4,6 +4,7 @@ import { useState } from 'react'
 import DropZone from '@/components/ui/DropZone'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import { uploadClientDocument } from '@/lib/upload-direct'
 
 interface ExtractedScanData {
   scan_type: string
@@ -49,30 +50,25 @@ export default function ScanUpload({ clientId, onScanSaved }: ScanUploadProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [preview, setPreview] = useState<ScanPreview | null>(null)
+  const [uploadPhase, setUploadPhase] = useState<'compressing' | 'uploading' | 'archiving' | null>(null)
 
   const handleFileAccepted = async (file: File) => {
     setError('')
     setUploading(true)
 
     try {
-      // Upload file
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('stage', 'body_scan')
-
-      const uploadRes = await fetch(`/api/clients/${clientId}/documents`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!uploadRes.ok) {
-        const errData = await uploadRes.json().catch(() => ({}))
-        throw new Error(errData.error || 'File upload failed')
-      }
-
-      const { file_url, file_type } = await uploadRes.json()
+      // Direct browser -> Supabase Storage upload. Going through the API route
+      // capped us at Vercel's ~4.5 MB request-body limit, which silently killed
+      // most phone photos and multi-page PDFs.
+      const { file_url, file_type } = await uploadClientDocument(
+        clientId,
+        file,
+        'body_scan',
+        phase => setUploadPhase(phase),
+      )
 
       setUploading(false)
+      setUploadPhase(null)
       setParsing(true)
 
       // AI parse the scan document with body_scan document type
@@ -82,15 +78,23 @@ export default function ScanUpload({ clientId, onScanSaved }: ScanUploadProps) {
         body: JSON.stringify({ file_url, file_type, document_type: 'body_scan' }),
       })
 
-      const parseData = await parseRes.json()
+      const parseData = await parseRes.json().catch(() => ({} as Record<string, unknown>))
 
+      // A failed AI read must never throw away an upload that already
+      // succeeded. Fall back to a blank, hand-editable preview and say why.
+      let parsed = parseRes.ok ? parseData.parsed : null
       if (!parseRes.ok) {
-        throw new Error(parseData.error || 'Could not parse scan')
+        setError(
+          `File saved, but automatic reading failed: ${
+            (parseData as { error?: string }).error || `HTTP ${parseRes.status}`
+          } — enter the values by hand below.`,
+        )
+      } else if (!parsed) {
+        setError('File saved, but no values could be read from it — enter them by hand below.')
       }
+      parsed = parsed || {}
 
-      // Use AI-extracted structured data directly
-      const parsed = parseData.parsed
-      if (parsed) {
+      {
         setPreview({
           scan_type: parsed.scan_type || 'other',
           body_fat_pct: parsed.body_fat_pct ?? null,
@@ -111,14 +115,13 @@ export default function ScanUpload({ clientId, onScanSaved }: ScanUploadProps) {
           notes: '',
           file_url,
         })
-      } else {
-        throw new Error('AI did not return structured scan data')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process scan')
     } finally {
       setUploading(false)
       setParsing(false)
+      setUploadPhase(null)
     }
   }
 
@@ -141,13 +144,21 @@ export default function ScanUpload({ clientId, onScanSaved }: ScanUploadProps) {
           skeletal_muscle_mass_lbs: preview.skeletal_muscle_mass_lbs,
           basal_metabolic_rate: preview.basal_metabolic_rate,
           visceral_fat_level: preview.visceral_fat_level,
+          body_water_lbs: preview.body_water_lbs,
+          bmi: preview.bmi,
+          right_arm_lbs: preview.right_arm_lbs,
+          left_arm_lbs: preview.left_arm_lbs,
+          trunk_lbs: preview.trunk_lbs,
+          right_leg_lbs: preview.right_leg_lbs,
+          left_leg_lbs: preview.left_leg_lbs,
           notes: preview.notes || null,
           file_url: preview.file_url,
         }),
       })
 
       if (!res.ok) {
-        throw new Error('Failed to save scan')
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `Failed to save scan (HTTP ${res.status})`)
       }
 
       setPreview(null)
@@ -394,8 +405,14 @@ export default function ScanUpload({ clientId, onScanSaved }: ScanUploadProps) {
       <DropZone
         onFileAccepted={handleFileAccepted}
         disabled={uploading || parsing}
-        label={uploading ? 'Uploading...' : parsing ? 'AI is reading your scan...' : 'Drop InBody/DEXA scan here'}
-        sublabel="PDF or image — AI will extract all body composition data"
+        label={
+          uploadPhase === 'compressing' ? 'Preparing image...'
+            : uploadPhase === 'uploading' ? 'Uploading...'
+            : uploadPhase === 'archiving' ? 'Archiving...'
+            : parsing ? 'AI is reading your scan...'
+            : 'Drop InBody/DEXA scan here'
+        }
+        sublabel="PDF or image, up to 20 MB — AI will extract all body composition data"
       />
       {error && (
         <p className="text-xs text-red-400 mt-2">{error}</p>

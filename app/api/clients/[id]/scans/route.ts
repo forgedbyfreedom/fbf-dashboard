@@ -55,8 +55,20 @@ export async function POST(
     const {
       scan_date, scan_type, body_fat_pct, lean_mass_lbs, fat_mass_lbs,
       total_weight_lbs, skeletal_muscle_mass_lbs, basal_metabolic_rate,
-      visceral_fat_level, notes, file_url
+      visceral_fat_level, body_water_lbs, bmi, percent_body_water, inbody_score,
+      right_arm_lbs, left_arm_lbs, trunk_lbs, right_leg_lbs, left_leg_lbs,
+      notes, file_url
     } = body
+
+    const num = (v: unknown) => {
+      if (v === null || v === undefined || v === '') return null
+      const n = typeof v === 'number' ? v : parseFloat(String(v))
+      return Number.isFinite(n) ? n : null
+    }
+    const int = (v: unknown) => {
+      const n = num(v)
+      return n === null ? null : Math.round(n)
+    }
 
     if (!scan_date || !scan_type) {
       return NextResponse.json({ error: 'scan_date and scan_type are required' }, { status: 400 })
@@ -69,13 +81,22 @@ export async function POST(
         client_id: clientId,
         scan_date,
         scan_type,
-        body_fat_pct: body_fat_pct != null ? parseFloat(body_fat_pct) : null,
-        lean_mass_lbs: lean_mass_lbs != null ? parseFloat(lean_mass_lbs) : null,
-        fat_mass_lbs: fat_mass_lbs != null ? parseFloat(fat_mass_lbs) : null,
-        total_weight_lbs: total_weight_lbs != null ? parseFloat(total_weight_lbs) : null,
-        skeletal_muscle_mass_lbs: skeletal_muscle_mass_lbs != null ? parseFloat(skeletal_muscle_mass_lbs) : null,
-        basal_metabolic_rate: basal_metabolic_rate != null ? parseInt(basal_metabolic_rate) : null,
-        visceral_fat_level: visceral_fat_level != null ? parseFloat(visceral_fat_level) : null,
+        body_fat_pct: num(body_fat_pct),
+        lean_mass_lbs: num(lean_mass_lbs),
+        fat_mass_lbs: num(fat_mass_lbs),
+        total_weight_lbs: num(total_weight_lbs),
+        skeletal_muscle_mass_lbs: num(skeletal_muscle_mass_lbs),
+        basal_metabolic_rate: int(basal_metabolic_rate),
+        visceral_fat_level: num(visceral_fat_level),
+        body_water_lbs: num(body_water_lbs),
+        bmi: num(bmi),
+        percent_body_water: num(percent_body_water),
+        inbody_score: int(inbody_score),
+        right_arm_lbs: num(right_arm_lbs),
+        left_arm_lbs: num(left_arm_lbs),
+        trunk_lbs: num(trunk_lbs),
+        right_leg_lbs: num(right_leg_lbs),
+        left_leg_lbs: num(left_leg_lbs),
         notes: notes || null,
         file_url: file_url || null,
       })
@@ -83,13 +104,20 @@ export async function POST(
       .single()
 
     if (error) {
-      console.error('Scan insert error:', error)
-      return NextResponse.json({ error: 'Failed to save scan' }, { status: 500 })
+      console.error('[SCANS] insert error:', error)
+      return NextResponse.json(
+        { error: `Failed to save scan: ${error.message}`, code: error.code, details: error.details },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({ scan })
-  } catch {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  } catch (err) {
+    console.error('[SCANS] POST fatal:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Server error' },
+      { status: 500 },
+    )
   }
 }
 
